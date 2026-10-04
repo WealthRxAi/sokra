@@ -10,7 +10,7 @@ Free for the person with the bill. Education and advocacy scripting, not legal o
 ## How it works
 
 ```
-photo/PDF ──▶ web/ (PWA, no build step)
+photo/PDF ──▶ docs/ (PWA, no build step)
                  │  client-side: HEIC→JPEG, resize ≤1800px
                  ▼
      supabase/functions/sokra-analyze   (Deno edge function)
@@ -27,7 +27,7 @@ The playbook — the expert reasoning for medical, credit card, collections, uti
 
 | Path | What |
 |---|---|
-| `web/` | The app. Static files, deploy anywhere. `index.html` (intake + results), `plan.html` (saved plan), `admin.html`, `privacy.html`, `terms.html`, `sw.js`, `manifest.webmanifest` |
+| `docs/` | The app. Static files, deploy anywhere. `index.html` (intake + results), `plan.html` (saved plan), `admin.html`, `privacy.html`, `terms.html`, `sw.js`, `manifest.webmanifest` |
 | `supabase/functions/sokra-analyze/` | Backend. Routes: `GET /health`, `POST /` (analyze), `GET /case/:id`, `POST /outcome`, `POST /delete`, `GET /stats` + `GET /cases` (admin token), `POST /followup` (cron token) |
 | `supabase/migrations/` | Schema: `sokra.config`, `sokra.cases`, `sokra.events`, bucket, pg_cron job |
 | `supabase/playbook.md` | The system prompt as stored in `sokra.config.playbook` |
@@ -56,7 +56,7 @@ Backend (via Supabase MCP or CLI):
 supabase functions deploy sokra-analyze --no-verify-jwt --project-ref igussyvvpcrgriugnvlx
 ```
 
-Frontend: `web/` is static. GitHub Pages serves it from `main` / `web`. To put it on a custom domain, add a `CNAME` file in `web/` and a DNS CNAME record → `wealthrxai.github.io`. Change `app_url` in `sokra.config` so emails link to the right place.
+Frontend: `docs/` is static. GitHub Pages serves it from `main` / `docs`. To put it on a custom domain, add a `CNAME` file in `docs/` and a DNS CNAME record → `wealthrxai.github.io`. Change `app_url` in `sokra.config` so emails link to the right place.
 
 ## Evaluate
 
