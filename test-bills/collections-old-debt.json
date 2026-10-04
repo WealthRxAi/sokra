@@ -1,0 +1,2 @@
+{ "fields": { "income": "36000", "household": "2", "state": "FL" },
+  "expect": { "bill_type": "collections", "lever_includes": "validation|statute|time-barred" } }

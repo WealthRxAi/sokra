@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#07080C">
+<title>Sokra — Reduce what you owe</title>
+<meta name="description" content="Upload any bill. Sokra finds the errors, the programs you're owed, and the exact words to say — then teaches you why it works. Free.">
+<meta property="og:title" content="Sokra — Reduce what you owe">
+<meta property="og:description" content="Upload any bill. Get the exact words that lower it. Free, no account.">
+<meta property="og:image" content="./og.png">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" href="./icon-192.png">
+<link rel="apple-touch-icon" href="./icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;0,9..144,600;1,9..144,300&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./sokra.css">
+</head>
+<body>
+<div class="wrap">
+  <header><a class="logo" href="./">So<span>k</span>ra</a><div class="tag">Reduce what you owe</div></header>
+
+  <div id="intake">
+    <h1>Upload the bill.<br>Get the <em>exact words</em> that lower it.</h1>
+    <p class="lede">Medical, credit card, collections, utilities, phone — any bill. Sokra reads it, finds the errors and programs you're owed, and hands you the script. Then it teaches you why it worked.</p>
+
+    <div class="card">
+      <div class="drop" id="drop">
+        <input type="file" id="files" accept="image/*,.heic,.heif,application/pdf" multiple>
+        <div class="big">Tap to photograph or upload</div>
+        <div class="small">Photo or PDF · up to 6 pages · nothing is shared with the biller</div>
+        <div class="thumbs" id="thumbs"></div>
+      </div>
+
+      <details class="ctx">
+        <summary>Add context — unlocks more savings (30 seconds)</summary>
+        <div class="grid">
+          <div><label>Household income / year</label><input type="text" id="income" inputmode="numeric" placeholder="36,000"><div class="hint">Decides charity care & hardship eligibility</div></div>
+          <div><label>People in household</label><input type="number" id="household" min="1" max="12" placeholder="2"></div>
+          <div><label>State</label><input type="text" id="state" maxlength="2" placeholder="FL" style="text-transform:uppercase"></div>
+          <div><label>Health insurance?</label><select id="insured"><option value="">—</option><option value="yes">Yes</option><option value="no">No</option></select></div>
+        </div>
+        <div style="margin-top:12px"><label>Anything else</label><textarea id="notes" placeholder="e.g. This was an ER visit. I already got a letter from a collector. I lost my job in June."></textarea></div>
+        <div style="margin-top:12px"><label>Email — we'll send your plan and check in once in two weeks</label><input type="email" id="email" placeholder="you@example.com"></div>
+        <label class="check"><input type="checkbox" id="consent_store"> <span>Keep a copy of my bill so I can come back to it. (Off = we analyze and discard the file.)</span></label>
+      </details>
+
+      <div class="err" id="err"></div>
+      <button class="btn" id="go" disabled>Analyze my bill</button>
+      <p class="fine">Free. No account. Education, not legal or licensed financial advice.</p>
+      <div class="install" id="install"><b>Keep Sokra on your phone.</b> <a href="#" id="install_btn">Add to home screen</a> — works offline for saved plans.</div>
+    </div>
+
+    <section>
+      <div class="sec">What happens</div>
+      <div class="prose">
+        <p><b style="color:var(--ink)">1. It reads every line.</b> Totals, codes, dates, who's billing you, whether it's in collections.</p>
+        <p><b style="color:var(--ink)">2. It finds what's wrong and what you're owed.</b> Duplicate charges, illegal balance bills, charity care you qualify for, hardship programs nobody mentioned, dispute windows that are still open.</p>
+        <p><b style="color:var(--ink)">3. It gives you the words.</b> Ranked by dollars, with the exact script to read on the phone tomorrow morning.</p>
+        <p><b style="color:var(--ink)">4. It teaches you why.</b> So the next bill, you don't need us.</p>
+      </div>
+    </section>
+  </div>
+
+  <div id="analyzing" class="hidden">
+    <div class="analyzing"><div class="ring"></div>
+      <div style="font-family:var(--serif);font-size:22px;margin-bottom:10px">Reading your bill</div>
+      <div class="steps" id="steps">Extracting line items…</div></div>
+  </div>
+
+  <div id="results" class="hidden"></div>
+
+  <footer><span>Sokra · LLCreativity LLC</span><span><a href="./privacy.html">Privacy</a> · <a href="./terms.html">Terms</a> · Built with Claude</span></footer>
+</div>
+<div class="toast" id="toast"></div>
+
+<script src="./sokra.js"></script>
+<script>
+const { API, $, prepare, renderPlan, toast, install } = SOKRA;
+const filesIn = $("#files"), thumbs = $("#thumbs"), go = $("#go"), err = $("#err"), drop = $("#drop");
+let picked = [];
+
+function showErr(m){ err.textContent = m; err.style.display = "block"; }
+async function take(list){
+  err.style.display = "none";
+  const raw = [...list].slice(0, 6);
+  try { picked = await Promise.all(raw.map(prepare)); } catch(e){ picked = []; showErr(e.message); }
+  render();
+}
+filesIn.addEventListener("change", () => take(filesIn.files));
+["dragenter","dragover"].forEach(e => drop.addEventListener(e, ev => { ev.preventDefault(); drop.classList.add("over"); }));
+["dragleave","drop"].forEach(e => drop.addEventListener(e, ev => { ev.preventDefault(); drop.classList.remove("over"); }));
+drop.addEventListener("drop", ev => take(ev.dataTransfer.files));
+$("#install_btn").addEventListener("click", e => { e.preventDefault(); install(); });
+
+function render(){
+  thumbs.innerHTML = "";
+  picked.forEach(f => {
+    if (f.type.startsWith("image/")) { const i = document.createElement("img"); i.className = "thumb"; i.src = URL.createObjectURL(f); thumbs.appendChild(i); }
+    else { const d = document.createElement("div"); d.className = "thumb"; d.textContent = "PDF"; thumbs.appendChild(d); }
+  });
+  go.disabled = picked.length === 0;
+}
+
+const STEPS = ["Extracting line items…","Checking for billing errors…","Matching assistance programs…","Writing your scripts…","Ranking by dollar impact…"];
+let stepTimer;
+
+go.addEventListener("click", async () => {
+  if (!picked.length) return;
+  err.style.display = "none";
+  $("#intake").classList.add("hidden"); $("#analyzing").classList.remove("hidden");
+  let i = 0; $("#steps").textContent = STEPS[0];
+  stepTimer = setInterval(() => { i = (i + 1) % STEPS.length; $("#steps").textContent = STEPS[i]; }, 2600);
+
+  const fd = new FormData();
+  picked.forEach(f => fd.append("files", f, f.name));
+  ["income","household","state","insured","notes","email"].forEach(k => fd.append(k, $("#" + k).value.trim()));
+  fd.append("consent_store", $("#consent_store").checked ? "1" : "0");
+  fd.append("source", new URLSearchParams(location.search).get("ref") || "web");
+
+  try {
+    const ctrl = new AbortController(); const to = setTimeout(() => ctrl.abort(), 120000);
+    const r = await fetch(API, { method: "POST", body: fd, signal: ctrl.signal }); clearTimeout(to);
+    const body = await r.json().catch(() => ({}));
+    clearInterval(stepTimer);
+    if (!r.ok || !body.ok) throw new Error(body.error || "Something went wrong. Please try again.");
+    if (body.id) { history.replaceState(null, "", "./plan.html?id=" + body.id); try { localStorage.setItem("sokra:last", body.id); } catch {} }
+    renderPlan($("#results"), body.analysis, body.id);
+    $("#analyzing").classList.add("hidden"); $("#results").classList.remove("hidden");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    if (body.emailed) toast("Plan emailed to you");
+  } catch(e) {
+    clearInterval(stepTimer);
+    $("#analyzing").classList.add("hidden"); $("#intake").classList.remove("hidden");
+    showErr(e.name === "AbortError" ? "That took too long. Try fewer pages or a smaller photo." : e.message);
+  }
+});
+</script>
+</body>
+</html>

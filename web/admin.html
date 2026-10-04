@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Sokra — Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@300;500&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./sokra.css">
+<style>.wrap{max-width:960px}.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:20px}td{font-size:13px}.ok{color:var(--teal)}.no{color:#F0A48A}</style>
+</head>
+<body>
+<div class="wrap">
+  <header><a class="logo" href="./">So<span>k</span>ra</a><div class="tag">Admin</div></header>
+  <div id="login" class="card" style="margin-top:30px;max-width:420px">
+    <label>Admin token</label><input type="password" id="tok" placeholder="paste token">
+    <button class="btn" id="go">Open dashboard</button>
+    <div class="err" id="err"></div>
+  </div>
+  <div id="dash" class="hidden">
+    <div class="row" id="health"></div>
+    <div class="stats" id="stats"></div>
+    <section><div class="sec">By bill type</div><div id="types" class="row"></div></section>
+    <section><div class="sec">Recent cases</div><div style="overflow:auto"><table id="cases"></table></div></section>
+    <p class="hint" style="margin-top:20px">Reported $ reduced is the only metric that matters. Everything else is instrumentation.</p>
+  </div>
+  <footer><span>Sokra · internal</span><span></span></footer>
+</div>
+<script src="./sokra.js"></script>
+<script>
+const { API, $, money, esc } = SOKRA;
+let tok = (() => { try { return sessionStorage.getItem("sokra:admin") || ""; } catch { return ""; } })();
+$("#tok").value = tok;
+$("#go").addEventListener("click", load);
+$("#tok").addEventListener("keydown", e => { if (e.key === "Enter") load(); });
+if (tok) load();
+
+async function load(){
+  tok = $("#tok").value.trim(); if (!tok) return;
+  const [s, c] = await Promise.all([
+    fetch(`${API}/stats?token=${encodeURIComponent(tok)}`).then(r => r.json()),
+    fetch(`${API}/cases?token=${encodeURIComponent(tok)}&limit=100`).then(r => r.json()),
+  ]);
+  if (!s.ok) { $("#err").textContent = s.error || "Unauthorized"; $("#err").style.display = "block"; return; }
+  try { sessionStorage.setItem("sokra:admin", tok); } catch {}
+  $("#login").classList.add("hidden"); $("#dash").classList.remove("hidden");
+
+  $("#health").innerHTML = [
+    ["Analysis key", s.has_key], ["Email (Resend)", s.has_email],
+  ].map(([k, v]) => `<span class="pill ${v ? "ok" : "no"}">${k}: ${v ? "on" : "OFF"}</span>`).join("") + `<span class="pill">${esc(s.model)}</span>`;
+
+  const st = [
+    ["Cases", s.cases, ""], ["With email", s.with_email, ""],
+    ["Billed total", money(s.total_billed_cents / 100), ""],
+    ["Est. reduction", `${money(s.est_low_cents / 100)}–${money(s.est_high_cents / 100)}`, ""],
+    ["Outcomes reported", s.outcomes_reported, ""],
+    ["Reported $ reduced", money(s.reported_reduced_cents / 100), "teal"],
+    ["Avg latency", (s.avg_latency_ms / 1000).toFixed(1) + "s", ""],
+    ["Est. API spend", "$" + s.est_api_cost_usd, ""],
+  ];
+  $("#stats").innerHTML = st.map(([l, v, cls]) => `<div class="stat ${cls}"><div class="v">${v}</div><div class="l">${l}</div></div>`).join("");
+  $("#types").innerHTML = Object.entries(s.by_type).sort((a, b) => b[1] - a[1]).map(([k, v]) => `<span class="pill">${esc(k)} · ${v}</span>`).join("") || `<span class="hint">No cases yet.</span>`;
+
+  const rows = (c.cases || []);
+  $("#cases").innerHTML = `<tr><th>When</th><th>Type</th><th>Provider</th><th class="r">Total</th><th class="r">Est.</th><th class="r">Reported</th><th>Email</th><th>Src</th><th class="r">ms</th><th></th></tr>` +
+    rows.map(r => `<tr${r.deleted_at ? ' style="opacity:.4"' : ""}>
+      <td>${new Date(r.created_at).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}</td>
+      <td>${esc(r.bill_type || "")}</td><td>${esc((r.provider || "").slice(0, 28))}</td>
+      <td class="r">${money(r.total_cents / 100)}</td>
+      <td class="r">${money(r.est_reduction_low_cents / 100)}–${money(r.est_reduction_high_cents / 100)}</td>
+      <td class="r" style="color:var(--teal)">${r.outcome_reported_cents != null ? money(r.outcome_reported_cents / 100) : "—"}</td>
+      <td>${r.email ? "✓" : ""}</td><td>${esc(r.source || "")}</td><td class="r">${r.latency_ms ?? ""}</td>
+      <td>${r.deleted_at ? "deleted" : `<a href="./plan.html?id=${r.id}" target="_blank">open</a>`}</td></tr>`).join("");
+}
+</script>
+</body>
+</html>

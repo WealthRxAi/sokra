@@ -1,0 +1,14 @@
+{
+  "name": "Sokra — Reduce what you owe",
+  "short_name": "Sokra",
+  "description": "Upload any bill. Get the exact words that lower it.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#07080C",
+  "theme_color": "#07080C",
+  "icons": [
+    { "src": "./icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "./icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

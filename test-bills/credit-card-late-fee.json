@@ -1,0 +1,2 @@
+{ "fields": { "income": "41000", "household": "1", "state": "FL", "notes": "I was laid off in August. First late payment ever." },
+  "expect": { "bill_type": "credit_card", "total_amount": 7728.15, "lever_includes": "hardship|late fee|APR", "errors_min": 1 } }

@@ -1,0 +1,2 @@
+{ "fields": { "income": "36000", "household": "2", "state": "FL", "insured": "no" },
+  "expect": { "bill_type": "medical", "total_amount": 47000, "lever_includes": "charity|financial assistance|501", "errors_min": 1 } }
