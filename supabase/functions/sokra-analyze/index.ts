@@ -10,8 +10,13 @@
 //   GET  /stats?token=…         → admin dashboard numbers
 //   GET  /cases?token=…&limit=  → admin recent cases
 //   POST /followup              → cron: email 14-day "did it work?" (x-cron-token)
+//   POST /checkout              → { id } → Stripe Checkout URL for Pro
+//   POST /stripe-webhook        → Stripe → marks case paid, generates docs
+//   GET  /docs/:id              → Pro documents (JSON) if paid
+//   GET  /pricing               → { pro_price_cents, pro_name }
 //
 // Env (Supabase secrets): ANTHROPIC_API_KEY (required), RESEND_API_KEY (optional),
+//   STRIPE_SECRET_KEY + STRIPE_WEBHOOK_SECRET (optional — Pro tier off without them),
 //   SOKRA_MODEL (optional), SOKRA_FROM (optional email From)
 // Config (sokra.config): playbook, admin_token_sha256, cron_token_sha256, app_url
 // ─────────────────────────────────────────────────────────────────────────────
@@ -26,13 +31,15 @@ const MODEL = Deno.env.get("SOKRA_MODEL") ?? "claude-sonnet-5-5";
 const ANTHROPIC_KEY = Deno.env.get("ANTHROPIC_API_KEY") ?? "";
 const RESEND_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
 const FROM = Deno.env.get("SOKRA_FROM") ?? "Sokra <sokra@llcreativityllc.com>";
+const STRIPE_KEY = Deno.env.get("STRIPE_SECRET_KEY") ?? "";
+const STRIPE_WH = Deno.env.get("STRIPE_WEBHOOK_SECRET") ?? "";
 const MAX_FILES = 6;
 const MAX_BYTES = 15 * 1024 * 1024;
 const IMG = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-cron-token",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-cron-token, stripe-signature",
   "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
 };
 const json = (b: unknown, s = 200) =>
@@ -59,6 +66,77 @@ async function cfg(key: string): Promise<string | null> {
 }
 async function log(kind: string, case_id: string | null, meta: unknown = null) {
   try { await sql`insert into sokra.events (kind, case_id, meta) values (${kind}, ${case_id}, ${meta ? sql.json(meta as never) : null})`; } catch { /* non-fatal */ }
+}
+
+// ─── Stripe (raw REST, no SDK) ───────────────────────────────────────────────
+async function stripe(path: string, form: Record<string, string>) {
+  const r = await fetch("https://api.stripe.com/v1/" + path, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${STRIPE_KEY}`, "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams(form).toString(),
+  });
+  const b = await r.json();
+  if (!r.ok) throw new Error(b?.error?.message ?? "stripe error");
+  return b;
+}
+async function verifyStripeSig(payload: string, header: string): Promise<boolean> {
+  if (!STRIPE_WH) return false;
+  const parts = Object.fromEntries(header.split(",").map((kv) => kv.split("=") as [string, string]));
+  const t = parts["t"], v1 = parts["v1"];
+  if (!t || !v1) return false;
+  if (Math.abs(Date.now() / 1000 - Number(t)) > 600) return false;
+  const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(STRIPE_WH), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const mac = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(`${t}.${payload}`));
+  const hex = Array.from(new Uint8Array(mac)).map((x) => x.toString(16).padStart(2, "0")).join("");
+  return hex === v1;
+}
+
+// ─── Claude text call (for Pro docs) ─────────────────────────────────────────
+async function claudeText(system: string, user: string, maxTokens = 4000): Promise<string> {
+  const r = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: { "x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01", "content-type": "application/json" },
+    body: JSON.stringify({ model: MODEL, max_tokens: maxTokens, temperature: 0.2, system, messages: [{ role: "user", content: user }] }),
+  });
+  const b = await r.json();
+  if (!r.ok) throw new Error(b?.error?.message ?? "claude error");
+  return (b.content ?? []).filter((c: { type: string }) => c.type === "text").map((c: { text: string }) => c.text).join("");
+}
+
+const DOCS_SYSTEM = `You write ready-to-send documents for a person disputing or reducing a bill, based on an analysis JSON of that bill. Plain, firm, polite English. First person. No legal threats, no claims you can't support from the analysis. Where a fact is unknown use [BRACKETS] for the person to fill in (e.g. [Your full name], [Account number]). Cite the specific law or program the analysis named (IRS 501(r), FDCPA §809, No Surprises Act, FCBA, etc.) in one plain sentence where relevant. Keep each document under 450 words.
+
+Respond with ONLY a JSON object:
+{
+  "letters": [
+    { "key": "string-id", "title": "string", "to": "who to send it to", "how": "mail / portal / email / fax — one line", "body": "full letter text with line breaks" }
+  ],
+  "call_sheet": {
+    "title": "Call sheet",
+    "who": "string", "number_hint": "string e.g. 'number on the top of the bill'",
+    "opening": "exact first sentence to say",
+    "asks": ["the specific things to ask for, in order"],
+    "if_they_say": [ { "they": "string", "you": "string" } ],
+    "before_hanging_up": ["string"],
+    "write_down": ["string"]
+  },
+  "checklist": ["documents to gather, in order"],
+  "timeline": [ { "when": "string", "what": "string" } ]
+}
+
+Which letters to produce depends on bill type:
+- medical: (1) financial assistance / charity care application cover letter, (2) itemized bill + error dispute letter, (3) if in_collections: debt validation letter
+- credit_card: (1) hardship program request, (2) fee/charge dispute if errors_found
+- collections: (1) debt validation letter (FDCPA), (2) settlement offer letter (only if the analysis suggests settlement)
+- utility: (1) payment arrangement + hardship program request, (2) dispute if errors_found
+- telecom: (1) retention / repricing request
+- tax: (1) first-time penalty abatement request
+- others: the one or two letters that match the top levers
+Always produce the call sheet, checklist and timeline.`;
+
+async function generateDocs(analysis: Record<string, unknown>, ctx: Record<string, unknown>) {
+  const raw = await claudeText(DOCS_SYSTEM, `Analysis JSON:\n${JSON.stringify(analysis)}\n\nPerson's context: ${JSON.stringify(ctx ?? {})}\nToday: ${new Date().toISOString().slice(0, 10)}`);
+  const m = raw.match(/\{[\s\S]*\}/);
+  return JSON.parse(m ? m[0] : raw);
 }
 
 // Fallback if the playbook row is missing — keeps the product alive, less sharp.
@@ -107,14 +185,38 @@ Deno.serve(async (req) => {
   if (req.method === "GET" && (path === "/" || path === "/health")) {
     let pb = false, dbOk = false;
     try { pb = !!(await cfg("playbook")); dbOk = true; } catch { /* db down */ }
-    return json({ ok: true, db: dbOk, has_key: !!ANTHROPIC_KEY, has_email: !!RESEND_KEY, has_playbook: pb, model: MODEL });
+    return json({ ok: true, db: dbOk, has_key: !!ANTHROPIC_KEY, has_email: !!RESEND_KEY, has_stripe: !!STRIPE_KEY && !!STRIPE_WH, has_playbook: pb, model: MODEL });
+  }
+
+  // pricing
+  if (req.method === "GET" && path === "/pricing") {
+    return json({ ok: true, enabled: !!STRIPE_KEY, pro_price_cents: Number(await cfg("pro_price_cents") ?? 2900), pro_name: await cfg("pro_name"), pro_description: await cfg("pro_description") });
+  }
+
+  // pro docs
+  if (req.method === "GET" && path.startsWith("/docs/")) {
+    const id = path.slice(6);
+    if (!isUuid(id)) return json({ error: "bad id" }, 400);
+    const r = await sql`select id, tier, docs, docs_generated_at, analysis, context, deleted_at from sokra.cases where id = ${id}`;
+    const c = r[0];
+    if (!c || c.deleted_at) return json({ error: "not found" }, 404);
+    if (c.tier !== "pro") return json({ error: "not_paid" }, 402);
+    if (!c.docs && c.analysis && ANTHROPIC_KEY) {
+      try {
+        const docs = await generateDocs(c.analysis, c.context);
+        await sql`update sokra.cases set docs = ${sql.json(docs as never)}, docs_generated_at = now() where id = ${id}`;
+        await log("docs_generated", id);
+        return json({ ok: true, docs });
+      } catch (e) { await log("docs_error", id, { msg: (e as Error).message }); return json({ error: "Couldn't generate documents right now. Try again in a minute — you won't be charged twice." }, 502); }
+    }
+    return json({ ok: true, docs: c.docs });
   }
 
   // saved plan
   if (req.method === "GET" && path.startsWith("/case/")) {
     const id = path.slice(6);
     if (!isUuid(id)) return json({ error: "bad id" }, 400);
-    const r = await sql`select id, created_at, provider, bill_type, analysis, outcome_reported_cents, deleted_at from sokra.cases where id = ${id}`;
+    const r = await sql`select id, created_at, provider, bill_type, analysis, outcome_reported_cents, deleted_at, tier, paid_at from sokra.cases where id = ${id}`;
     const data = r[0];
     if (!data || data.deleted_at) return json({ error: "Plan not found or deleted" }, 404);
     return json({ ok: true, ...data });
@@ -127,10 +229,10 @@ Deno.serve(async (req) => {
     if (!tok || !want || (await sha(tok)) !== want) return json({ error: "unauthorized" }, 401);
     if (path === "/cases") {
       const limit = Math.min(200, +(url.searchParams.get("limit") ?? 50));
-      const data = await sql`select id, created_at, email, bill_type, provider, total_cents, est_reduction_low_cents, est_reduction_high_cents, outcome_reported_cents, outcome_at, latency_ms, tokens_in, tokens_out, source, deleted_at from sokra.cases order by created_at desc limit ${limit}`;
+      const data = await sql`select id, created_at, email, bill_type, provider, total_cents, est_reduction_low_cents, est_reduction_high_cents, outcome_reported_cents, outcome_at, latency_ms, tokens_in, tokens_out, source, deleted_at, tier, amount_paid_cents from sokra.cases order by created_at desc limit ${limit}`;
       return json({ ok: true, cases: data });
     }
-    const r = await sql`select bill_type, total_cents, est_reduction_low_cents, est_reduction_high_cents, outcome_reported_cents, created_at, email, deleted_at, latency_ms, tokens_in, tokens_out from sokra.cases` as unknown as Array<Record<string, any>>;
+    const r = await sql`select bill_type, total_cents, est_reduction_low_cents, est_reduction_high_cents, outcome_reported_cents, created_at, email, deleted_at, latency_ms, tokens_in, tokens_out, tier, amount_paid_cents from sokra.cases` as unknown as Array<Record<string, any>>;
     const live = r.filter((x) => !x.deleted_at);
     const sum = (k: string) => live.reduce((a, x) => a + (Number(x[k]) || 0), 0);
     const outcomes = live.filter((x) => x.outcome_reported_cents != null);
@@ -149,13 +251,79 @@ Deno.serve(async (req) => {
       total_billed_cents: sum("total_cents"),
       est_low_cents: sum("est_reduction_low_cents"), est_high_cents: sum("est_reduction_high_cents"),
       outcomes_reported: outcomes.length,
+      pro_cases: live.filter((x) => x.tier === "pro").length,
+      revenue_cents: live.reduce((a, x) => a + (Number(x.amount_paid_cents) || 0), 0),
       reported_reduced_cents: outcomes.reduce((a, x) => a + (Number(x.outcome_reported_cents) || 0), 0),
       by_type: byType, per_day: perDay, avg_latency_ms: avgLatency, est_api_cost_usd: +cost.toFixed(2),
-      has_key: !!ANTHROPIC_KEY, has_email: !!RESEND_KEY, model: MODEL,
+      has_key: !!ANTHROPIC_KEY, has_email: !!RESEND_KEY, has_stripe: !!STRIPE_KEY && !!STRIPE_WH, model: MODEL,
     });
   }
 
   if (req.method !== "POST") return json({ error: "method" }, 405);
+
+  // checkout
+  if (path === "/checkout") {
+    if (!STRIPE_KEY) return json({ error: "Payments aren't switched on yet." }, 503);
+    let b: { id?: string } = {};
+    try { b = await req.json(); } catch { return json({ error: "bad json" }, 400); }
+    if (!b.id || !isUuid(b.id)) return json({ error: "id required" }, 400);
+    const r = await sql`select id, tier, email, provider, deleted_at from sokra.cases where id = ${b.id}`;
+    const c = r[0];
+    if (!c || c.deleted_at) return json({ error: "not found" }, 404);
+    if (c.tier === "pro") return json({ ok: true, already: true });
+    const appUrl = (await cfg("app_url")) ?? "";
+    const price = Number(await cfg("pro_price_cents") ?? 2900);
+    const name = (await cfg("pro_name")) ?? "Sokra Pro";
+    const desc = (await cfg("pro_description")) ?? "";
+    try {
+      const sess = await stripe("checkout/sessions", {
+        mode: "payment",
+        "line_items[0][price_data][currency]": "usd",
+        "line_items[0][price_data][unit_amount]": String(price),
+        "line_items[0][price_data][product_data][name]": name,
+        "line_items[0][price_data][product_data][description]": desc.slice(0, 500),
+        "line_items[0][quantity]": "1",
+        success_url: `${appUrl}/plan.html?id=${c.id}&paid=1`,
+        cancel_url: `${appUrl}/plan.html?id=${c.id}`,
+        client_reference_id: c.id,
+        "metadata[case_id]": c.id,
+        ...(c.email ? { customer_email: c.email } : {}),
+        allow_promotion_codes: "true",
+      });
+      await sql`update sokra.cases set stripe_session_id = ${sess.id} where id = ${c.id}`;
+      await log("checkout_started", c.id);
+      return json({ ok: true, url: sess.url });
+    } catch (e) { await log("checkout_error", c.id, { msg: (e as Error).message }); return json({ error: "Couldn't start checkout. Try again." }, 502); }
+  }
+
+  // stripe webhook
+  if (path === "/stripe-webhook") {
+    const payload = await req.text();
+    const sig = req.headers.get("stripe-signature") ?? "";
+    if (!(await verifyStripeSig(payload, sig))) return json({ error: "bad signature" }, 400);
+    const ev = JSON.parse(payload);
+    if (ev.type === "checkout.session.completed" || ev.type === "checkout.session.async_payment_succeeded") {
+      const sess = ev.data.object;
+      const caseId = sess.metadata?.case_id ?? sess.client_reference_id;
+      if (caseId && isUuid(caseId) && sess.payment_status === "paid") {
+        await sql`insert into sokra.payments (case_id, stripe_session_id, stripe_payment_intent, amount_cents, currency, email, product, status, raw)
+          values (${caseId}, ${sess.id}, ${sess.payment_intent ?? null}, ${sess.amount_total ?? null}, ${sess.currency ?? null}, ${sess.customer_details?.email ?? sess.customer_email ?? null}, 'pro', 'paid', ${sql.json(sess as never)})
+          on conflict (stripe_session_id) do nothing`;
+        await sql`update sokra.cases set tier = 'pro', paid_at = now(), stripe_session_id = ${sess.id}, stripe_payment_intent = ${sess.payment_intent ?? null}, amount_paid_cents = ${sess.amount_total ?? null},
+          email = coalesce(email, ${sess.customer_details?.email ?? null}) where id = ${caseId}`;
+        await log("paid", caseId, { amount: sess.amount_total });
+        // pre-generate docs so the plan page is instant
+        try {
+          const r = await sql`select analysis, context, docs from sokra.cases where id = ${caseId}`;
+          if (r[0]?.analysis && !r[0]?.docs && ANTHROPIC_KEY) {
+            const docs = await generateDocs(r[0].analysis, r[0].context);
+            await sql`update sokra.cases set docs = ${sql.json(docs as never)}, docs_generated_at = now() where id = ${caseId}`;
+          }
+        } catch (e) { await log("docs_error", caseId, { msg: (e as Error).message }); }
+      }
+    }
+    return json({ received: true });
+  }
 
   // outcome
   if (path === "/outcome") {
@@ -177,7 +345,7 @@ Deno.serve(async (req) => {
     const r = await sql`select files from sokra.cases where id = ${b.id}`;
     const paths = ((r[0]?.files as { path?: string }[] | null) ?? []).map((f) => f.path).filter((p): p is string => !!p);
     if (paths.length) await storage().remove(paths);
-    await sql`update sokra.cases set analysis = null, files = null, context = null, email = null, deleted_at = now() where id = ${b.id}`;
+    await sql`update sokra.cases set analysis = null, files = null, context = null, email = null, docs = null, deleted_at = now() where id = ${b.id}`;
     await log("delete", b.id);
     return json({ ok: true });
   }
@@ -201,7 +369,7 @@ Deno.serve(async (req) => {
 
   // ── analyze ────────────────────────────────────────────────────────────────
   if (path !== "/" && path !== "/analyze") return json({ error: "not found" }, 404);
-  if (!ANTHROPIC_KEY) return json({ error: "Sokra isn't switched on yet — the analysis key hasn't been added. Try again shortly." }, 503);
+  if (!ANTHROPIC_KEY) return json({ error: "Sokra is briefly offline for maintenance. Your bill was not uploaded. Please try again in a little while." }, 503);
 
   let form: FormData;
   try { form = await req.formData(); } catch { return json({ error: "Expected multipart form data" }, 400); }

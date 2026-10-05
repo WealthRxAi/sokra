@@ -48,6 +48,7 @@ window.SOKRA = (() => {
       </div></div>`);
 
     if (a.escalate) h.push(`<div class="esc"><b>Get a human on this.</b> ${esc(a.escalate)}</div>`);
+    if (opts.returning && id && opts.outcomeDone == null) h.push(`<div class="outcome-top"><b>Welcome back.</b> Made the call yet? When something comes off, <a href="#outcome" style="color:var(--teal)">tell us the number</a> — it's how we know this works.</div>`);
 
     if (a.do_first) h.push(`<section><div class="sec">Do this first</div>
       <div class="first"><div class="a">${esc(a.do_first.action)}</div><div class="w">${esc(a.do_first.why)}</div><span class="when">${esc(a.do_first.when || "today")}</span></div></section>`);
@@ -76,6 +77,29 @@ window.SOKRA = (() => {
     if ((a.teach || []).length) h.push(`<section><div class="sec">So you never need this again</div>${a.teach.map((t) => `
       <details class="q"><summary class="qq">${esc(t.q)}</summary><p>${esc(t.a)}</p></details>`).join("")}</section>`);
 
+    // ── Pro tier
+    if (id && opts.pricing?.enabled !== false) {
+      if (opts.tier === "pro") {
+        h.push(`<section id="pro"><div class="sec">Your documents</div><div id="docs"><div class="analyzing" style="padding:28px 0"><div class="ring" style="width:36px;height:36px"></div><div class="steps">Writing your letters from this bill…</div></div></div></section>`);
+      } else {
+        const price = opts.pricing?.pro_price_cents ? "$" + (opts.pricing.pro_price_cents / 100).toFixed(0) : "$29";
+        const topLever = levers[0]?.name ? esc(levers[0].name) : "the top lever";
+        h.push(`<div class="pro" id="pro">
+          <div class="k">Want it written for you?</div>
+          <h3>Ready-to-send letters, drafted from this bill.</h3>
+          <p>Sokra Pro turns the plan above into the actual documents — filled in with your bill's numbers, account, dates and the laws that apply. Print, sign, send.</p>
+          <ul>
+            <li>Letter for <b>${topLever}</b>${levers[1] ? ` and ${esc(levers[1].name)}` : ""}</li>
+            <li>One-page call sheet: what to say, what they'll say back, what to write down</li>
+            <li>Document checklist and a dated timeline</li>
+          </ul>
+          <div class="price">${price} <small>one time · this bill · no subscription</small></div>
+          <button class="btn" id="pro_btn">Get my documents</button>
+          <div class="guar">If the letters aren't usable, reply to your receipt and it's refunded. The free plan above never goes away.</div>
+        </div>`);
+      }
+    }
+
     if (id) {
       const planUrl = location.origin + location.pathname.replace(/[^/]*$/, "") + "plan.html?id=" + id;
       h.push(`<div class="outcome" id="outcome">
@@ -102,6 +126,17 @@ window.SOKRA = (() => {
       else toast("Couldn't save — try again");
     });
     $("#share_btn", root)?.addEventListener("click", () => navigator.clipboard.writeText(opts.planUrl).then(() => toast("Link copied")));
+    $("#pro_btn", root)?.addEventListener("click", async () => {
+      const b = $("#pro_btn", root); b.disabled = true; b.textContent = "Opening secure checkout…";
+      try {
+        const r = await fetch(API + "/checkout", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ id }) });
+        const j = await r.json();
+        if (j.already) { location.href = "./plan.html?id=" + id + "&paid=1"; return; }
+        if (!r.ok || !j.url) throw new Error(j.error || "Couldn't start checkout");
+        location.href = j.url;
+      } catch (e) { toast(e.message); b.disabled = false; b.textContent = "Get my documents"; }
+    });
+    if (opts.tier === "pro") loadDocs(root, id);
     $("#del_btn", root)?.addEventListener("click", async () => {
       if (!confirm("Delete this plan and any uploaded files permanently?")) return;
       const r = await fetch(API + "/delete", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ id }) });
@@ -110,11 +145,47 @@ window.SOKRA = (() => {
     });
   }
 
+  // ── Pro documents
+  async function loadDocs(root, id, attempt = 0) {
+    const box = $("#docs", root); if (!box) return;
+    try {
+      const r = await fetch(API + "/docs/" + id);
+      const j = await r.json();
+      if (r.status === 402) { box.innerHTML = `<div class="hint">Payment is still processing — this usually takes a few seconds. <a href="#" id="docs_retry">Refresh</a></div>`; $("#docs_retry", root)?.addEventListener("click", (e) => { e.preventDefault(); loadDocs(root, id, attempt + 1); }); if (attempt < 6) setTimeout(() => loadDocs(root, id, attempt + 1), 3000); return; }
+      if (!r.ok || !j.docs) throw new Error(j.error || "Couldn't load documents");
+      renderDocs(box, j.docs);
+    } catch (e) {
+      box.innerHTML = `<div class="err" style="display:block">${esc(e.message)} <a href="#" id="docs_retry" style="color:inherit">Try again</a></div>`;
+      $("#docs_retry", root)?.addEventListener("click", (ev) => { ev.preventDefault(); box.innerHTML = `<div class="analyzing" style="padding:28px 0"><div class="ring" style="width:36px;height:36px"></div></div>`; loadDocs(root, id, attempt + 1); });
+    }
+  }
+  function renderDocs(box, d) {
+    const h = [];
+    (d.letters || []).forEach((L, i) => h.push(`<details class="doc" ${i === 0 ? "open" : ""}>
+      <summary><div><div class="t">${esc(L.title)}</div><div class="to">To: ${esc(L.to)} · ${esc(L.how)}</div></div></summary>
+      <div class="body"><pre>${esc(L.body)}</pre>
+        <div class="acts"><button data-copy="${esc(L.body)}" class="copyb">Copy letter</button><button data-print="${i}" class="printb">Print / save PDF</button></div></div></details>`));
+    const c = d.call_sheet;
+    if (c) h.push(`<details class="doc" open><summary><div><div class="t">${esc(c.title || "Call sheet")}</div><div class="to">${esc(c.who)} · ${esc(c.number_hint)}</div></div></summary>
+      <div class="body"><div class="cs">
+        <b>Open with</b><div class="say">"${esc(c.opening)}"</div>
+        <b>Ask for, in order</b><ul>${(c.asks || []).map((x) => `<li>${esc(x)}</li>`).join("")}</ul>
+        ${(c.if_they_say || []).length ? `<b>If they say…</b><ul>${c.if_they_say.map((x) => `<li><i>"${esc(x.they)}"</i> → ${esc(x.you)}</li>`).join("")}</ul>` : ""}
+        <b>Before hanging up</b><ul>${(c.before_hanging_up || []).map((x) => `<li>${esc(x)}</li>`).join("")}</ul>
+        <b>Write down</b><ul>${(c.write_down || []).map((x) => `<li>${esc(x)}</li>`).join("")}</ul>
+      </div><div class="acts"><button class="printb" data-print="cs">Print call sheet</button></div></div></details>`);
+    if ((d.checklist || []).length) h.push(`<details class="doc"><summary><div class="t">Documents to gather</div></summary><div class="body"><div class="cs"><ul>${d.checklist.map((x) => `<li>${esc(x)}</li>`).join("")}</ul></div></div></details>`);
+    if ((d.timeline || []).length) h.push(`<details class="doc"><summary><div class="t">Timeline</div></summary><div class="body"><div class="cs"><ul>${d.timeline.map((x) => `<li><b style="display:inline;margin:0 6px 0 0;color:var(--gold)">${esc(x.when)}</b>${esc(x.what)}</li>`).join("")}</ul></div></div></details>`);
+    box.innerHTML = h.join("");
+    box.querySelectorAll(".copyb").forEach((b) => b.addEventListener("click", () => navigator.clipboard.writeText(b.dataset.copy).then(() => toast("Letter copied"))));
+    box.querySelectorAll(".printb").forEach((b) => b.addEventListener("click", () => { box.querySelectorAll("details").forEach((x) => x.open = true); window.print(); }));
+  }
+
   // ── PWA
   if ("serviceWorker" in navigator) navigator.serviceWorker.register("./sw.js").catch(() => {});
   let deferredInstall = null;
   window.addEventListener("beforeinstallprompt", (e) => { e.preventDefault(); deferredInstall = e; const el = $("#install"); if (el) el.style.display = "block"; });
   function install() { if (deferredInstall) { deferredInstall.prompt(); deferredInstall = null; } }
 
-  return { API, $, money, esc, toast, prepare, renderPlan, install };
+  return { API, $, money, esc, toast, prepare, renderPlan, install, loadDocs };
 })();

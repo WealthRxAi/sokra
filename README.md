@@ -43,6 +43,8 @@ Supabase project: `igussyvvpcrgriugnvlx`
 | Secret | Required | Purpose |
 |---|---|---|
 | `ANTHROPIC_API_KEY` | **yes** | The engine. Without it `/health` reports `has_key:false` and analysis returns 503. |
+| `STRIPE_SECRET_KEY` | for Pro | Live or test secret key. Without it the Pro block is hidden and `/checkout` returns 503. |
+| `STRIPE_WEBHOOK_SECRET` | for Pro | Signing secret of a webhook endpoint pointed at `…/sokra-analyze/stripe-webhook` for event `checkout.session.completed`. |
 | `RESEND_API_KEY` | no | Plan email + 14-day follow-up. Without it, both silently skip. |
 | `SOKRA_FROM` | no | From address, default `Sokra <sokra@llcreativityllc.com>` (domain must be verified in Resend) |
 | `SOKRA_MODEL` | no | Default `claude-sonnet-5-5` |
@@ -64,6 +66,11 @@ Frontend: `docs/` is static. GitHub Pages serves it from `main` / `docs`. To put
 node scripts/eval.mjs
 ```
 Prints PASS/FAIL per test bill with latency and the plan summary. Exit code 0 when all pass.
+
+## Tiers
+
+- **Free** — the full plan: errors, ranked levers, scripts, do-first, deadlines, teach. Always.
+- **Pro ($29 one-time, per bill)** — letters drafted from the bill (financial-assistance cover letter, dispute, debt validation, hardship — whichever fit), a call sheet, checklist, timeline. Stripe Checkout; the webhook marks the case `tier='pro'` and pre-generates the documents. Price and copy live in `sokra.config` (`pro_price_cents`, `pro_name`, `pro_description`).
 
 ## The one metric
 

@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pricing — Sokra</title>
+<meta name="description" content="Sokra is free. Pro documents are $29, one time, if you want the letters written for you.">
+<link rel="icon" href="./icon-192.png">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;1,9..144,300&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./sokra.css">
+<style>
+.tiers{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:24px}
+@media(max-width:560px){.tiers{grid-template-columns:1fr}}
+.tier{border:1px solid var(--line);border-radius:16px;padding:22px;background:var(--panel)}
+.tier.pro{border-color:rgba(217,180,90,.4);background:linear-gradient(180deg,rgba(217,180,90,.07),var(--panel))}
+.tier .nm{font-family:var(--mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink3)}
+.tier.pro .nm{color:var(--gold)}
+.tier .pr{font-family:var(--serif);font-size:40px;font-weight:500;margin:8px 0 2px;line-height:1}
+.tier .pr small{font-size:14px;color:var(--ink3);font-family:var(--sans);font-weight:400}
+.tier .for{color:var(--ink2);font-size:14px;margin-bottom:14px}
+.tier ul{margin:0 0 0 18px;color:var(--ink2);font-size:14px}.tier li{margin-bottom:6px}
+.faq .q{padding:14px 0}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header><a class="logo" href="./">So<span>k</span>ra</a><nav class="nav"><a href="./">Analyze a bill</a><a href="./sample.html">Sample</a></nav></header>
+  <h1>The plan is free.<br>The paperwork is <em>$29</em>.</h1>
+  <p class="lede">Most people never need Pro — the free plan has the scripts, and a phone call is usually enough. Pro is for when you'd rather send a letter than make the call, or when the bill is big enough that you want every word right.</p>
+
+  <div class="tiers">
+    <div class="tier">
+      <div class="nm">Free</div>
+      <div class="pr">$0 <small>every bill, forever</small></div>
+      <div class="for">For anyone with a bill.</div>
+      <ul>
+        <li>Every line of the bill read and checked</li>
+        <li>Errors and overcharges flagged</li>
+        <li>Every reduction lever, ranked by dollars</li>
+        <li>Phone script for each one, with copy button</li>
+        <li>Do-this-first action and deadlines</li>
+        <li>Why it works — so you can do the next one alone</li>
+        <li>Saved plan link, works offline</li>
+        <li>Plan emailed, one check-in at 14 days</li>
+      </ul>
+      <a class="btn ghost" href="./">Analyze a bill</a>
+    </div>
+    <div class="tier pro">
+      <div class="nm">Pro documents</div>
+      <div class="pr" id="price">$29 <small>one time · this bill</small></div>
+      <div class="for">For when you want it written for you.</div>
+      <ul>
+        <li>Letters drafted from <i>your</i> bill — account, dates, amounts, the law that applies</li>
+        <li>Financial-assistance cover letter, dispute letter, debt-validation letter, hardship request — whichever fit</li>
+        <li>One-page call sheet: opening line, what to ask, what they'll say back, what to write down</li>
+        <li>Document checklist and dated timeline</li>
+        <li>Print, copy, or save as PDF</li>
+        <li>Everything in Free, still free</li>
+      </ul>
+      <a class="btn" href="./">Start with a free plan →</a>
+      <p class="hint" style="margin-top:10px">Pro is offered on your plan page after the free analysis. No subscription, no account. Refunded if the letters aren't usable.</p>
+    </div>
+  </div>
+
+  <section class="faq">
+    <div class="sec">Honest questions</div>
+    <details class="q"><summary class="qq">Why is the plan free?</summary><p>Because the person holding a bill they can't pay shouldn't pay to find out their options. Bill negotiators take 18–25% of what they save you. We'd rather give you the words and let you keep the money.</p></details>
+    <details class="q"><summary class="qq">Then why charge for documents?</summary><p>Writing a letter that cites the right program, quotes the right amounts, and reads like it came from someone who knows the rules takes real work — and real API cost on our side. $29 flat covers it and keeps Sokra running without ads or selling your data.</p></details>
+    <details class="q"><summary class="qq">Will Sokra negotiate for me?</summary><p>No. Sokra never contacts your biller. You do — with the exact words. That's on purpose: when you make the call, you learn how, and the next bill you won't need anyone.</p></details>
+    <details class="q"><summary class="qq">Is this legal advice?</summary><p>No. Sokra is financial education and advocacy scripting. For a lawsuit, garnishment, or eviction, talk to legal aid — the plan will point you there.</p></details>
+    <details class="q"><summary class="qq">What about clinics, credit unions, counselors?</summary><p>If you help people with bills for a living, write to <a href="mailto:sokra@llcreativityllc.com">sokra@llcreativityllc.com</a>. There's a version of Sokra built for the counselor in the room.</p></details>
+  </section>
+
+  <footer><span>Sokra · LLCreativity LLC</span><span><a href="./privacy.html">Privacy</a> · <a href="./terms.html">Terms</a></span></footer>
+</div>
+<script src="./sokra.js"></script>
+<script>
+fetch(SOKRA.API + "/pricing").then(r => r.json()).then(p => { if (p.pro_price_cents) document.getElementById("price").innerHTML = "$" + (p.pro_price_cents/100).toFixed(0) + " <small>one time · this bill</small>"; }).catch(()=>{});
+</script>
+</body>
+</html>

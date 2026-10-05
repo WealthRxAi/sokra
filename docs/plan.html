@@ -15,7 +15,7 @@
 </head>
 <body>
 <div class="wrap">
-  <header><a class="logo" href="./">So<span>k</span>ra</a><div class="tag">Your plan</div></header>
+  <header><a class="logo" href="./">So<span>k</span>ra</a><nav class="nav"><a href="./">New bill</a><a href="./pricing.html">Pricing</a></nav></header>
   <div id="state" class="analyzing"><div class="ring"></div><div class="steps">Loading your plan…</div></div>
   <div id="results" class="hidden"></div>
   <footer><span>Sokra · LLCreativity LLC</span><span><a href="./privacy.html">Privacy</a> · <a href="./terms.html">Terms</a></span></footer>
@@ -28,13 +28,20 @@ const id = new URLSearchParams(location.search).get("id") || (()=>{ try { return
 (async () => {
   if (!id) { $("#state").innerHTML = `<div class="card"><b>No plan here.</b><p class="hint">Open the link from your email, or analyze a bill.</p><a class="btn ghost" href="./">Analyze a bill</a></div>`; return; }
   try {
-    const r = await fetch(API + "/case/" + id);
+    const qs = new URLSearchParams(location.search);
+    const justPaid = qs.get("paid") === "1";
+    const [r, pr] = await Promise.all([fetch(API + "/case/" + id), fetch(API + "/pricing").then(x => x.json()).catch(() => ({}))]);
     const b = await r.json();
     if (!r.ok || !b.ok || !b.analysis) throw new Error(b.error || "Plan not found");
     try { localStorage.setItem("sokra:plan:" + id, JSON.stringify(b)); } catch {}
-    renderPlan($("#results"), b.analysis, b.id, { outcomeDone: b.outcome_reported_cents ?? null });
+    const returning = !justPaid && !sessionStorage.getItem("sokra:fresh:" + id);
+    try { sessionStorage.setItem("sokra:fresh:" + id, "1"); } catch {}
+    // If Stripe redirected back but the webhook hasn't landed yet, treat as pro and let docs poll
+    const tier = (b.tier === "pro" || justPaid) ? "pro" : "free";
+    renderPlan($("#results"), b.analysis, b.id, { outcomeDone: b.outcome_reported_cents ?? null, tier, pricing: pr, returning });
     $("#state").classList.add("hidden"); $("#results").classList.remove("hidden");
-    if (location.hash === "#outcome") setTimeout(() => $("#outcome")?.scrollIntoView({ behavior: "smooth" }), 200);
+    if (justPaid) { history.replaceState(null, "", "./plan.html?id=" + id); SOKRA.toast("Payment received — writing your documents"); setTimeout(() => $("#pro")?.scrollIntoView({ behavior: "smooth" }), 300); }
+    else if (location.hash === "#outcome") setTimeout(() => $("#outcome")?.scrollIntoView({ behavior: "smooth" }), 200);
   } catch (e) {
     // offline fallback
     let cached = null; try { cached = JSON.parse(localStorage.getItem("sokra:plan:" + id) || "null"); } catch {}

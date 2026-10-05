@@ -20,59 +20,88 @@
 </head>
 <body>
 <div class="wrap">
-  <header><a class="logo" href="./">So<span>k</span>ra</a><div class="tag">Reduce what you owe</div></header>
+  <header><a class="logo" href="./">So<span>k</span>ra</a><nav class="nav"><a href="./sample.html">See a sample</a><a href="./pricing.html">Pricing</a></nav></header>
 
   <div id="intake">
-    <h1>Upload the bill.<br>Get the <em>exact words</em> that lower it.</h1>
-    <p class="lede">Medical, credit card, collections, utilities, phone — any bill. Sokra reads it, finds the errors and programs you're owed, and hands you the script. Then it teaches you why it worked.</p>
+    <h1 class="h1-tight">Upload the bill.<br>Get the <em>exact words</em><br>that lower it.</h1>
+    <p class="lede lede-short">Medical, credit card, collections, utilities, phone. Free. No account.</p>
 
     <div class="card">
       <div class="drop" id="drop">
         <input type="file" id="files" accept="image/*,.heic,.heif,application/pdf" multiple>
         <div class="big">Tap to photograph or upload</div>
-        <div class="small">Photo or PDF · up to 6 pages · nothing is shared with the biller</div>
+        <div class="small">Photo or PDF · up to 6 pages</div>
         <div class="thumbs" id="thumbs"></div>
       </div>
+      <div class="err" id="err" role="alert"></div>
 
-      <details class="ctx">
-        <summary>Add context — unlocks more savings (30 seconds)</summary>
-        <div class="grid">
-          <div><label>Household income / year</label><input type="text" id="income" inputmode="numeric" placeholder="36,000"><div class="hint">Decides charity care & hardship eligibility</div></div>
-          <div><label>People in household</label><input type="number" id="household" min="1" max="12" placeholder="2"></div>
-          <div><label>State</label><input type="text" id="state" maxlength="2" placeholder="FL" style="text-transform:uppercase"></div>
-          <div><label>Health insurance?</label><select id="insured"><option value="">—</option><option value="yes">Yes</option><option value="no">No</option></select></div>
+      <div id="ctx" class="ctx-open">
+        <div class="ctx-head">
+          <span class="ctx-title">Two quick questions</span>
+          <span class="ctx-why">They decide if you qualify for help</span>
         </div>
-        <div style="margin-top:12px"><label>Anything else</label><textarea id="notes" placeholder="e.g. This was an ER visit. I already got a letter from a collector. I lost my job in June."></textarea></div>
-        <div style="margin-top:12px"><label>Email — we'll send your plan and check in once in two weeks</label><input type="email" id="email" placeholder="you@example.com"></div>
-        <label class="check"><input type="checkbox" id="consent_store"> <span>Keep a copy of my bill so I can come back to it. (Off = we analyze and discard the file.)</span></label>
-      </details>
+        <div class="grid">
+          <div><label>Household income / year</label><input type="text" id="income" inputmode="numeric" placeholder="36,000"></div>
+          <div><label>People in household</label><input type="number" id="household" min="1" max="12" placeholder="2"></div>
+        </div>
+        <details class="ctx more">
+          <summary>More details (optional)</summary>
+          <div class="grid">
+            <div><label>State</label><input type="text" id="state" maxlength="2" placeholder="FL" style="text-transform:uppercase"></div>
+            <div><label>Health insurance?</label><select id="insured"><option value="">—</option><option value="yes">Yes</option><option value="no">No</option></select></div>
+          </div>
+          <div style="margin-top:12px"><label>Anything else</label><textarea id="notes" placeholder="e.g. This was an ER visit. A collector already wrote to me. I lost my job in June."></textarea></div>
+          <div style="margin-top:12px"><label>Email — we'll send your plan and check in once in two weeks</label><input type="email" id="email" placeholder="you@example.com"></div>
+          <label class="check"><input type="checkbox" id="consent_store"> <span>Keep a copy of my bill so I can come back to it. Off = analyzed and discarded.</span></label>
+        </details>
+      </div>
 
-      <div class="err" id="err"></div>
-      <button class="btn" id="go" disabled>Analyze my bill</button>
-      <p class="fine">Free. No account. Education, not legal or licensed financial advice.</p>
-      <div class="install" id="install"><b>Keep Sokra on your phone.</b> <a href="#" id="install_btn">Add to home screen</a> — works offline for saved plans.</div>
+      <button class="btn" id="go" disabled>Analyze my bill — free</button>
+      <p class="fine">Takes about 30 seconds. Nothing is sent to your biller. <a href="./privacy.html">Privacy</a></p>
+      <div class="install" id="install"><b>Keep Sokra on your phone.</b> <a href="#" id="install_btn">Add to home screen</a></div>
+    </div>
+
+    <!-- proof strip -->
+    <div class="proof">
+      <div class="proof-item"><div class="proof-n">80%</div><div class="proof-l">of hospital bills contain errors</div></div>
+      <div class="proof-item"><div class="proof-n">29%</div><div class="proof-l">of eligible patients ever get the charity care they're owed</div></div>
+      <div class="proof-item"><div class="proof-n">$0</div><div class="proof-l">Sokra takes from your savings — ever</div></div>
     </div>
 
     <section>
-      <div class="sec">What happens</div>
-      <div class="prose">
-        <p><b style="color:var(--ink)">1. It reads every line.</b> Totals, codes, dates, who's billing you, whether it's in collections.</p>
-        <p><b style="color:var(--ink)">2. It finds what's wrong and what you're owed.</b> Duplicate charges, illegal balance bills, charity care you qualify for, hardship programs nobody mentioned, dispute windows that are still open.</p>
-        <p><b style="color:var(--ink)">3. It gives you the words.</b> Ranked by dollars, with the exact script to read on the phone tomorrow morning.</p>
-        <p><b style="color:var(--ink)">4. It teaches you why.</b> So the next bill, you don't need us.</p>
+      <div class="sec">What you get back</div>
+      <div class="what">
+        <div class="what-item"><b>The errors on the bill.</b> Duplicate charges, unbundled items, math that doesn't add up.</div>
+        <div class="what-item"><b>Every way to reduce it, ranked by dollars.</b> Charity care you qualify for. Hardship programs nobody mentioned. Illegal balance bills. Dispute windows still open.</div>
+        <div class="what-item"><b>The exact words.</b> A script to read on the phone tomorrow morning, with a copy button.</div>
+        <div class="what-item"><b>What to do first, and by when.</b> One action. Deadlines that matter.</div>
+        <div class="what-item"><b>Why it works.</b> So the next bill, you don't need us.</div>
       </div>
+      <a class="btn ghost" href="./sample.html" style="margin-top:16px">See a real sample plan →</a>
+    </section>
+
+    <section>
+      <div class="sec">How it compares</div>
+      <table class="cmp">
+        <tr><th></th><th>Bill negotiators</th><th>Sokra</th></tr>
+        <tr><td>What they charge</td><td>18–25% of what they save you</td><td class="hi">Free. Pro docs $29 flat, if you want them.</td></tr>
+        <tr><td>Who makes the call</td><td>They do</td><td class="hi">You do — with the words in hand</td></tr>
+        <tr><td>Next bill</td><td>Pay them again</td><td class="hi">You already know how</td></tr>
+        <tr><td>Bills under $1,000</td><td>Usually won't take them</td><td class="hi">Same help, same price: free</td></tr>
+      </table>
     </section>
   </div>
 
   <div id="analyzing" class="hidden">
     <div class="analyzing"><div class="ring"></div>
       <div style="font-family:var(--serif);font-size:22px;margin-bottom:10px">Reading your bill</div>
-      <div class="steps" id="steps">Extracting line items…</div></div>
+      <div class="steps" id="steps">Extracting line items…</div>
+      <div class="bar"><div class="bar-fill" id="barfill"></div></div></div>
   </div>
 
   <div id="results" class="hidden"></div>
 
-  <footer><span>Sokra · LLCreativity LLC</span><span><a href="./privacy.html">Privacy</a> · <a href="./terms.html">Terms</a> · Built with Claude</span></footer>
+  <footer><span>Sokra · LLCreativity LLC</span><span><a href="./pricing.html">Pricing</a> · <a href="./privacy.html">Privacy</a> · <a href="./terms.html">Terms</a></span></footer>
 </div>
 <div class="toast" id="toast"></div>
 
@@ -82,12 +111,13 @@ const { API, $, prepare, renderPlan, toast, install } = SOKRA;
 const filesIn = $("#files"), thumbs = $("#thumbs"), go = $("#go"), err = $("#err"), drop = $("#drop");
 let picked = [];
 
-function showErr(m){ err.textContent = m; err.style.display = "block"; }
+function showErr(m){ err.textContent = m; err.style.display = "block"; err.scrollIntoView({ behavior: "smooth", block: "center" }); }
 async function take(list){
   err.style.display = "none";
   const raw = [...list].slice(0, 6);
   try { picked = await Promise.all(raw.map(prepare)); } catch(e){ picked = []; showErr(e.message); }
   render();
+  if (picked.length) { go.scrollIntoView({ behavior: "smooth", block: "center" }); $("#income").focus({ preventScroll: true }); }
 }
 filesIn.addEventListener("change", () => take(filesIn.files));
 ["dragenter","dragover"].forEach(e => drop.addEventListener(e, ev => { ev.preventDefault(); drop.classList.add("over"); }));
@@ -102,17 +132,21 @@ function render(){
     else { const d = document.createElement("div"); d.className = "thumb"; d.textContent = "PDF"; thumbs.appendChild(d); }
   });
   go.disabled = picked.length === 0;
+  go.textContent = picked.length ? `Analyze ${picked.length > 1 ? picked.length + " pages" : "my bill"} — free` : "Analyze my bill — free";
 }
 
-const STEPS = ["Extracting line items…","Checking for billing errors…","Matching assistance programs…","Writing your scripts…","Ranking by dollar impact…"];
-let stepTimer;
+const STEPS = ["Reading every line…","Checking for billing errors…","Matching assistance programs…","Writing your scripts…","Ranking by dollar impact…","Almost there…"];
+let stepTimer, barTimer;
 
 go.addEventListener("click", async () => {
   if (!picked.length) return;
   err.style.display = "none";
   $("#intake").classList.add("hidden"); $("#analyzing").classList.remove("hidden");
+  window.scrollTo({ top: 0 });
   let i = 0; $("#steps").textContent = STEPS[0];
-  stepTimer = setInterval(() => { i = (i + 1) % STEPS.length; $("#steps").textContent = STEPS[i]; }, 2600);
+  stepTimer = setInterval(() => { i = Math.min(i + 1, STEPS.length - 1); $("#steps").textContent = STEPS[i]; }, 5000);
+  let pct = 0; const bf = $("#barfill");
+  barTimer = setInterval(() => { pct = Math.min(92, pct + (pct < 60 ? 3 : 1)); bf.style.width = pct + "%"; }, 700);
 
   const fd = new FormData();
   picked.forEach(f => fd.append("files", f, f.name));
@@ -124,15 +158,15 @@ go.addEventListener("click", async () => {
     const ctrl = new AbortController(); const to = setTimeout(() => ctrl.abort(), 120000);
     const r = await fetch(API, { method: "POST", body: fd, signal: ctrl.signal }); clearTimeout(to);
     const body = await r.json().catch(() => ({}));
-    clearInterval(stepTimer);
+    clearInterval(stepTimer); clearInterval(barTimer); bf.style.width = "100%";
     if (!r.ok || !body.ok) throw new Error(body.error || "Something went wrong. Please try again.");
     if (body.id) { history.replaceState(null, "", "./plan.html?id=" + body.id); try { localStorage.setItem("sokra:last", body.id); } catch {} }
-    renderPlan($("#results"), body.analysis, body.id);
+    renderPlan($("#results"), body.analysis, body.id, { tier: "free" });
     $("#analyzing").classList.add("hidden"); $("#results").classList.remove("hidden");
     window.scrollTo({ top: 0, behavior: "smooth" });
     if (body.emailed) toast("Plan emailed to you");
   } catch(e) {
-    clearInterval(stepTimer);
+    clearInterval(stepTimer); clearInterval(barTimer);
     $("#analyzing").classList.add("hidden"); $("#intake").classList.remove("hidden");
     showErr(e.name === "AbortError" ? "That took too long. Try fewer pages or a smaller photo." : e.message);
   }
