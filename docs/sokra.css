@@ -193,3 +193,16 @@ input[type=text],input[type=number],input[type=email],select,textarea{border-col
 .word{border-left:2px solid var(--line2);padding-left:12px}
 .word b{display:block;font-size:15px}
 .word span{color:var(--ink2);font-size:14px}
+/* The facility's own posted policy — the real numbers, not a national average. */
+.fap{border:1px solid var(--line);border-radius:14px;padding:18px;background:var(--panel)}
+.fap.pending{color:var(--ink2);font-size:15px;display:flex;gap:10px;align-items:flex-start}
+.fap.pending .dot{width:8px;height:8px;border-radius:50%;background:var(--gold);margin-top:7px;flex:none;animation:pulse 1.4s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:.25}50%{opacity:1}}
+.fap.none{font-size:15px;color:var(--ink2);line-height:1.55}
+.fap.none b{color:var(--ink);display:block;margin-bottom:4px}
+.fap .fac{font-family:var(--serif);font-size:19px;margin-bottom:10px}
+.fap table{width:100%;font-size:15px}
+.fap .np{font-size:15px;color:var(--ink2);margin-top:12px;line-height:1.55}
+.fap .np b{color:var(--ink)}
+.fap .src{font-size:13px;color:var(--ink3);margin-top:14px}
+.fap .src a{color:var(--gold)}

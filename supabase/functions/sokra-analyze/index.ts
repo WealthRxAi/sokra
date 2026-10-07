@@ -224,6 +224,89 @@ async function generateDocs(analysis: Record<string, unknown>, ctx: Record<strin
 }
 
 // Fallback if the playbook row is missing — keeps the product alive, less sharp.
+// ─── Facility policy lookup ──────────────────────────────────────────────────
+// 501(r) requires every nonprofit hospital to PUBLISH its own financial assistance
+// policy. Generalising from a national average ("most write off 100% up to 200% FPL")
+// is the single biggest source of wrong numbers in a plan, because the real
+// thresholds vary enormously by facility. This reads the actual posted policy.
+//
+// It runs AFTER the plan is returned, so it costs the person no waiting, and it is
+// strictly additive: any failure leaves the plan exactly as it is today.
+const POLICY_SYSTEM = `You look up ONE named US hospital's own published Financial Assistance Policy (FAP) and report what it actually says. Nonprofit hospitals are required by IRS 501(r)(4) to post the FAP, a plain-language summary and the application form publicly, so a real document usually exists.
+
+Search for it. Prefer the hospital's own website; a state or health-system page is acceptable. Do NOT use a third-party summary, a news article, or another hospital's policy.
+
+Report ONLY what the document states. If you cannot find the facility's own policy, say so — a wrong number here is far worse than no number, because the person will quote it to the billing office.
+
+Respond with ONLY a JSON object:
+{
+  "found": boolean,
+  "facility": "the facility name as the policy names it, or null",
+  "source_url": "direct URL to the policy or summary you read, or null",
+  "nonprofit": "yes|no|unclear",
+  "free_care_up_to_fpl": number|null,
+  "discount_up_to_fpl": number|null,
+  "application_period_days": number|null,
+  "asset_test": "yes|no|unclear",
+  "residency_required": "yes|no|unclear",
+  "separate_providers": "string|null — what the policy says about doctors who bill separately",
+  "how_to_apply": "string|null — one sentence, plus the phone number if the policy gives one",
+  "notable": "string|null — anything that would change what this person should do",
+  "checked_on": "YYYY-MM-DD"
+}
+Numbers are plain percentages of the Federal Poverty Level: 200 means 200% FPL. Use null for anything the document does not state. Never infer a threshold from a national pattern.`;
+
+async function lookupFacilityPolicy(provider: string, state: string | null): Promise<Record<string, unknown> | null> {
+  const user = `Hospital or provider as written on the bill: ${provider}\nState: ${state ?? "unknown"}\nToday: ${new Date().toISOString().slice(0, 10)}\n\nFind this facility's own financial assistance policy and report what it says.`;
+  // The server-side search tool has gone through more than one spelling and may need a
+  // beta header. Try the variants rather than letting one rejection kill the feature.
+  const attempts: { tool: string; beta?: string }[] = [
+    { tool: "web_search_20250305" },
+    { tool: "web_search_20250305", beta: "web-search-2025-03-05" },
+    { tool: "web_search" },
+  ];
+  try {
+    let body: Record<string, any> | null = null;
+    for (const att of attempts) {
+      const r = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: { ...anthropicHeaders(), ...(att.beta ? { "anthropic-beta": att.beta } : {}) },
+        body: JSON.stringify({
+          model: MODEL,
+          max_tokens: 3000,
+          system: POLICY_SYSTEM,
+          tools: [{ type: att.tool, name: "web_search", max_uses: 6 }],
+          messages: [{ role: "user", content: user }],
+        }),
+      });
+      const b = await r.json();
+      if (r.ok) { body = b; break; }
+      await log("policy_api_error", null, { tool: att.tool, beta: att.beta ?? null, status: r.status, msg: b?.error?.message });
+      // Only keep trying if the complaint was about the tool itself.
+      if (!/tool|web_search|beta/i.test(String(b?.error?.message ?? ""))) return null;
+    }
+    if (!body) return null;
+    const text = (body.content ?? []).filter((c: { type: string }) => c.type === "text").map((c: { text: string }) => c.text).join("");
+    const p = parseLooseJson(text);
+    // A "found" with no source is an unsourced claim; treat it as not found.
+    if (!p.found || !p.source_url) return { found: false, checked_on: new Date().toISOString().slice(0, 10) };
+    return p;
+  } catch (e) { await log("policy_error", null, { msg: (e as Error).message }); return null; }
+}
+
+// Writes the policy into the stored analysis once it arrives. The plan page polls
+// for it, so the person sees it slot in without ever having waited.
+async function enrichWithPolicy(caseId: string, provider: string, state: string | null) {
+  const p = await lookupFacilityPolicy(provider, state);
+  if (!p) return;
+  try {
+    await sql`update sokra.cases
+      set analysis = jsonb_set(coalesce(analysis, '{}'::jsonb), '{facility_policy}', ${sql.json(p as never)}::jsonb, true)
+      where id = ${caseId} and deleted_at is null`;
+    await log("policy_found", caseId, { found: p.found, url: p.source_url ?? null });
+  } catch (e) { await log("policy_write_error", caseId, { msg: (e as Error).message }); }
+}
+
 // A hard output budget, appended to whatever playbook is configured. This is a
 // system constraint rather than advice, so it lives in code: the richer playbook
 // made the model verbose enough to hit the token ceiling and lose its own levers,
@@ -639,5 +722,14 @@ Deno.serve(async (req) => {
     if (emailed) await sql`update sokra.cases set plan_emailed_at = now() where id = ${id}`;
   }
 
-  return json({ ok: true, id: id ?? null, analysis, emailed });
+  // Look up this facility's real posted policy in the background. The plan is already
+  // on its way back, so this adds nothing to the wait, and if it fails the plan stands.
+  const providerName = (analysis.provider as string) ?? "";
+  if (id && analysis.bill_type === "medical" && providerName) {
+    const task = enrichWithPolicy(id, providerName, ctx.state);
+    try { (globalThis as { EdgeRuntime?: { waitUntil(p: Promise<unknown>): void } }).EdgeRuntime?.waitUntil(task); }
+    catch { /* no waitUntil here — let it run unawaited */ }
+  }
+
+  return json({ ok: true, id: id ?? null, analysis, emailed, policy_pending: !!(id && analysis.bill_type === "medical" && providerName) });
 });

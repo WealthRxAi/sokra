@@ -21,6 +21,44 @@ window.SOKRA = (() => {
     toast("Couldn't copy automatically — the text is selected, hold and choose Copy");
   }
 
+
+  // Renders the facility-policy block in its three states: still looking, found, or
+  // not published anywhere we could read.
+  function renderPolicy(fp) {
+    const head = `<h2 class="sec">What your hospital's own policy says</h2>`;
+    if (!fp) return head + `<div class="fap pending"><span class="dot"></span>Looking up ${"this hospital"}'s published financial assistance policy… this takes a minute and will appear here. You don't need to wait for it.</div>`;
+    if (!fp.found) return head + `<div class="fap none"><b>We couldn't find this hospital's policy published online.</b> That doesn't mean there isn't one — under IRS 501(r) a nonprofit hospital must have a written policy and must give you the application if you ask. Use the script above and ask them to send it to you.</div>`;
+    const rows = [
+      fp.free_care_up_to_fpl != null ? ["Free care", `Household income up to ${fp.free_care_up_to_fpl}% of the poverty level`] : null,
+      fp.discount_up_to_fpl != null ? ["Partial discount", `Up to ${fp.discount_up_to_fpl}% of the poverty level`] : null,
+      fp.application_period_days != null ? ["You have", `${fp.application_period_days} days from your first bill to apply`] : null,
+      fp.asset_test && fp.asset_test !== "unclear" ? ["Savings counted?", fp.asset_test === "yes" ? "Yes — they look at savings too" : "No — income only"] : null,
+      fp.residency_required && fp.residency_required !== "unclear" ? ["Must live locally?", fp.residency_required === "yes" ? "Yes" : "No"] : null,
+    ].filter(Boolean);
+    return head + `<div class="fap found">
+      ${fp.facility ? `<div class="fac">${esc(fp.facility)}</div>` : ""}
+      ${rows.length ? `<table>${rows.map(([k, v]) => `<tr><td>${esc(k)}</td><td class="r">${esc(v)}</td></tr>`).join("")}</table>` : ""}
+      ${fp.separate_providers ? `<p class="np"><b>Doctors who bill separately:</b> ${esc(fp.separate_providers)}</p>` : ""}
+      ${fp.how_to_apply ? `<p class="np"><b>How to apply:</b> ${esc(fp.how_to_apply)}</p>` : ""}
+      ${fp.notable ? `<p class="np">${esc(fp.notable)}</p>` : ""}
+      <p class="src">Read from ${fp.source_url ? `<a href="${esc(fp.source_url)}" rel="noopener" target="_blank">the hospital's own policy</a>` : "the hospital's own policy"}${fp.checked_on ? ` on ${esc(fp.checked_on)}` : ""}. Policies change — confirm the numbers when you call.</p>
+    </div>`;
+  }
+
+  // The lookup runs after the plan is delivered, so check back for it a few times.
+  function pollPolicy(id, root, tries = 0) {
+    if (!id || tries > 10) return;
+    setTimeout(async () => {
+      try {
+        const b = await fetch(API + "/case/" + id).then((r) => r.json());
+        const fp = b?.analysis?.facility_policy;
+        const box = $("#fap", root);
+        if (fp && box) { box.innerHTML = renderPolicy(fp); return; }
+      } catch {}
+      pollPolicy(id, root, tries + 1);
+    }, tries < 3 ? 8000 : 15000);
+  }
+
   function toast(t) { const el = $("#toast"); if (!el) return; el.setAttribute("role","status"); el.setAttribute("aria-live","polite"); el.textContent = t; el.classList.add("on"); setTimeout(() => el.classList.remove("on"), 1600); }
 
   // ── Funnel ping. No cookie, no third-party script, no identity — just which step was
@@ -84,6 +122,14 @@ window.SOKRA = (() => {
 
     // A glossary after the jargon has already appeared thirty times is a glossary
     // nobody reads. This sits above the levers, where the words first turn up.
+    // What THIS hospital's own posted policy says, rather than a national average.
+    // Arrives after the plan (it needs a web lookup), so render a placeholder and let
+    // pollPolicy swap it in. Medical bills only.
+    if (a.bill_type === "medical") {
+      const fp = a.facility_policy;
+      h.push(`<section id="fap">${renderPolicy(fp)}</section>`);
+    }
+
     if ((a.plain_words || []).length) h.push(`<section><h2 class="sec">What these words mean</h2><div class="words">${a.plain_words.map((w) => `
       <div class="word"><b>${esc(w.term)}</b><span>${esc(w.means)}</span></div>`).join("")}</div></section>`);
 
@@ -158,6 +204,7 @@ window.SOKRA = (() => {
       if (r.ok) { $("#outcome", root).innerHTML = `<div class="t">Thank you.</div><div class="d">${money(+amt)} reported. That's the number that matters.</div>`; }
       else toast("Couldn't save — try again");
     });
+    if (a.bill_type === "medical" && !a.facility_policy) pollPolicy(id, root);
     $("#share_btn", root)?.addEventListener("click", () => copyText(opts.planUrl, "Link copied"));
     if ($("#pro_btn", root)) hit("pro_shown");
     $("#pro_btn", root)?.addEventListener("click", async () => {
