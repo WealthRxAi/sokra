@@ -110,6 +110,37 @@ async function stripe(path: string, form: Record<string, string>) {
   if (!r.ok) throw new Error(b?.error?.message ?? "stripe error");
   return b;
 }
+async function stripeGet(path: string) {
+  const r = await fetch("https://api.stripe.com/v1/" + path, { headers: { Authorization: `Bearer ${STRIPE_KEY}` } });
+  const b = await r.json();
+  if (!r.ok) throw new Error(b?.error?.message ?? "stripe error");
+  return b;
+}
+// Shared by the Stripe webhook and by /confirm (the browser's return from Checkout).
+// Either path can run first; both are idempotent.
+async function markPaid(sess: Record<string, any>): Promise<string | null> {
+  const caseId = sess.metadata?.case_id ?? sess.client_reference_id;
+  if (!caseId || !isUuid(caseId) || sess.payment_status !== "paid") return null;
+  const already = await sql`select tier from sokra.cases where id = ${caseId}`;
+  if (!already[0]) return null;
+  if (already[0].tier !== "pro") {
+    await sql`insert into sokra.payments (case_id, stripe_session_id, stripe_payment_intent, amount_cents, currency, email, product, status, raw)
+      values (${caseId}, ${sess.id}, ${sess.payment_intent ?? null}, ${sess.amount_total ?? null}, ${sess.currency ?? null}, ${sess.customer_details?.email ?? sess.customer_email ?? null}, 'pro', 'paid', ${sql.json(sess as never)})
+      on conflict (stripe_session_id) do nothing`;
+    await sql`update sokra.cases set tier = 'pro', paid_at = now(), stripe_session_id = ${sess.id}, stripe_payment_intent = ${sess.payment_intent ?? null}, amount_paid_cents = ${sess.amount_total ?? null},
+      email = coalesce(email, ${sess.customer_details?.email ?? null}) where id = ${caseId}`;
+    await log("paid", caseId, { amount: sess.amount_total });
+  }
+  // pre-generate docs so the plan page is instant
+  try {
+    const r = await sql`select analysis, context, docs from sokra.cases where id = ${caseId}`;
+    if (r[0]?.analysis && !r[0]?.docs && ANTHROPIC_KEY) {
+      const docs = await generateDocs(r[0].analysis, r[0].context);
+      await sql`update sokra.cases set docs = ${sql.json(docs as never)}, docs_generated_at = now() where id = ${caseId}`;
+    }
+  } catch (e) { await log("docs_error", caseId, { msg: (e as Error).message }); }
+  return caseId;
+}
 async function verifyStripeSig(payload: string, header: string): Promise<boolean> {
   if (!STRIPE_WH) return false;
   const parts = Object.fromEntries(header.split(",").map((kv) => kv.split("=") as [string, string]));
@@ -219,7 +250,7 @@ Deno.serve(async (req) => {
     const names = Object.keys(Deno.env.toObject()).filter((k) => /ANTHROPIC|STRIPE|RESEND|SOKRA/i.test(k)).sort();
     let lastErr: unknown = null;
     try { const e = await sql`select meta, at from sokra.events where kind in ('api_error','api_unreachable','parse_error') order by at desc limit 1`; lastErr = e[0] ?? null; } catch { /* ignore */ }
-    return json({ ok: true, db: dbOk, has_key: !!ANTHROPIC_KEY, has_workspace: !!ANTHROPIC_WS, has_email: !!RESEND_KEY, has_stripe: !!STRIPE_KEY && !!STRIPE_WH, has_playbook: pb, model: MODEL, secret_names: names, last_engine_error: lastErr });
+    return json({ ok: true, db: dbOk, has_key: !!ANTHROPIC_KEY, has_workspace: !!ANTHROPIC_WS, has_email: !!RESEND_KEY, has_stripe: !!STRIPE_KEY, has_stripe_webhook: !!STRIPE_WH, has_playbook: pb, model: MODEL, secret_names: names, last_engine_error: lastErr });
   }
 
   // pricing
@@ -289,7 +320,7 @@ Deno.serve(async (req) => {
       revenue_cents: live.reduce((a, x) => a + (Number(x.amount_paid_cents) || 0), 0),
       reported_reduced_cents: outcomes.reduce((a, x) => a + (Number(x.outcome_reported_cents) || 0), 0),
       by_type: byType, per_day: perDay, avg_latency_ms: avgLatency, est_api_cost_usd: +cost.toFixed(2),
-      has_key: !!ANTHROPIC_KEY, has_email: !!RESEND_KEY, has_stripe: !!STRIPE_KEY && !!STRIPE_WH, model: MODEL,
+      has_key: !!ANTHROPIC_KEY, has_email: !!RESEND_KEY, has_stripe: !!STRIPE_KEY, has_stripe_webhook: !!STRIPE_WH, model: MODEL,
     });
   }
 
@@ -317,7 +348,9 @@ Deno.serve(async (req) => {
         "line_items[0][price_data][product_data][name]": name,
         "line_items[0][price_data][product_data][description]": desc.slice(0, 500),
         "line_items[0][quantity]": "1",
-        success_url: `${appUrl}/plan.html?id=${c.id}&paid=1`,
+        // {CHECKOUT_SESSION_ID} lets the return visit confirm the payment directly with
+        // Stripe, so the product works whether or not a webhook is configured.
+        success_url: `${appUrl}/plan.html?id=${c.id}&paid=1&cs={CHECKOUT_SESSION_ID}`,
         cancel_url: `${appUrl}/plan.html?id=${c.id}`,
         client_reference_id: c.id,
         "metadata[case_id]": c.id,
@@ -330,31 +363,32 @@ Deno.serve(async (req) => {
     } catch (e) { await log("checkout_error", c.id, { msg: (e as Error).message }); return json({ error: "Couldn't start checkout. Try again." }, 502); }
   }
 
-  // stripe webhook
+  // confirm a payment from the browser's return trip, asking Stripe directly.
+  // This is the primary path — it makes the webhook an optional safety net rather
+  // than a single point of silent failure.
+  if (path === "/confirm") {
+    if (!STRIPE_KEY) return json({ error: "payments off" }, 503);
+    let b: { id?: string; session_id?: string } = {};
+    try { b = await req.json(); } catch { return json({ error: "bad json" }, 400); }
+    if (!b.id || !isUuid(b.id) || !b.session_id || !/^cs_[A-Za-z0-9_]+$/.test(b.session_id)) return json({ error: "id and session_id required" }, 400);
+    try {
+      const sess = await stripeGet("checkout/sessions/" + b.session_id);
+      // The session must be the one minted for THIS case — never trust the id in the URL alone.
+      const owner = sess.metadata?.case_id ?? sess.client_reference_id;
+      if (owner !== b.id) { await log("confirm_mismatch", b.id, { session: b.session_id }); return json({ error: "not found" }, 404); }
+      const paid = await markPaid(sess);
+      return json({ ok: true, paid: !!paid, payment_status: sess.payment_status });
+    } catch (e) { await log("confirm_error", b.id, { msg: (e as Error).message }); return json({ error: "Couldn't confirm the payment yet." }, 502); }
+  }
+
+  // stripe webhook — optional backup for people who close the tab before redirect
   if (path === "/stripe-webhook") {
     const payload = await req.text();
     const sig = req.headers.get("stripe-signature") ?? "";
     if (!(await verifyStripeSig(payload, sig))) return json({ error: "bad signature" }, 400);
     const ev = JSON.parse(payload);
     if (ev.type === "checkout.session.completed" || ev.type === "checkout.session.async_payment_succeeded") {
-      const sess = ev.data.object;
-      const caseId = sess.metadata?.case_id ?? sess.client_reference_id;
-      if (caseId && isUuid(caseId) && sess.payment_status === "paid") {
-        await sql`insert into sokra.payments (case_id, stripe_session_id, stripe_payment_intent, amount_cents, currency, email, product, status, raw)
-          values (${caseId}, ${sess.id}, ${sess.payment_intent ?? null}, ${sess.amount_total ?? null}, ${sess.currency ?? null}, ${sess.customer_details?.email ?? sess.customer_email ?? null}, 'pro', 'paid', ${sql.json(sess as never)})
-          on conflict (stripe_session_id) do nothing`;
-        await sql`update sokra.cases set tier = 'pro', paid_at = now(), stripe_session_id = ${sess.id}, stripe_payment_intent = ${sess.payment_intent ?? null}, amount_paid_cents = ${sess.amount_total ?? null},
-          email = coalesce(email, ${sess.customer_details?.email ?? null}) where id = ${caseId}`;
-        await log("paid", caseId, { amount: sess.amount_total });
-        // pre-generate docs so the plan page is instant
-        try {
-          const r = await sql`select analysis, context, docs from sokra.cases where id = ${caseId}`;
-          if (r[0]?.analysis && !r[0]?.docs && ANTHROPIC_KEY) {
-            const docs = await generateDocs(r[0].analysis, r[0].context);
-            await sql`update sokra.cases set docs = ${sql.json(docs as never)}, docs_generated_at = now() where id = ${caseId}`;
-          }
-        } catch (e) { await log("docs_error", caseId, { msg: (e as Error).message }); }
-      }
+      await markPaid(ev.data.object);
     }
     return json({ received: true });
   }

@@ -30,13 +30,19 @@ const id = new URLSearchParams(location.search).get("id") || (()=>{ try { return
   try {
     const qs = new URLSearchParams(location.search);
     const justPaid = qs.get("paid") === "1";
+    const cs = qs.get("cs");
+    // Coming back from Checkout: confirm with Stripe before loading the plan, so the
+    // documents are already written by the time the page paints. Doesn't need a webhook.
+    if (justPaid && cs) {
+      try { await fetch(API + "/confirm", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, session_id: cs }) }); } catch {}
+    }
     const [r, pr] = await Promise.all([fetch(API + "/case/" + id), fetch(API + "/pricing").then(x => x.json()).catch(() => ({}))]);
     const b = await r.json();
     if (!r.ok || !b.ok || !b.analysis) throw new Error(b.error || "Plan not found");
     try { localStorage.setItem("sokra:plan:" + id, JSON.stringify(b)); } catch {}
     const returning = !justPaid && !sessionStorage.getItem("sokra:fresh:" + id);
     try { sessionStorage.setItem("sokra:fresh:" + id, "1"); } catch {}
-    // If Stripe redirected back but the webhook hasn't landed yet, treat as pro and let docs poll
+    // If Stripe redirected back but confirmation is still settling, treat as pro and let docs poll
     const tier = (b.tier === "pro" || justPaid) ? "pro" : "free";
     renderPlan($("#results"), b.analysis, b.id, { outcomeDone: b.outcome_reported_cents ?? null, tier, pricing: pr, returning });
     $("#state").classList.add("hidden"); $("#results").classList.remove("hidden");
