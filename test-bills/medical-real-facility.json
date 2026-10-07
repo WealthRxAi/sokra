@@ -1,0 +1,3 @@
+{ "fields": { "income": "34000", "household": "2", "state": "FL", "insured": "no", "goal": "gone" },
+  "expect": { "bill_type": "medical", "total_amount": 14200, "lever_includes": "assistance|financial|501", "errors_min": 1 },
+  "note": "Synthetic, watermarked fixture that names a REAL nonprofit hospital so the facility-policy lookup has a findable target. Invented patient, account and amounts." }
