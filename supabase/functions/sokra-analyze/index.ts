@@ -39,6 +39,10 @@ const RESEND_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
 const FROM = Deno.env.get("SOKRA_FROM") ?? "Sokra <sokra@llcreativityllc.com>";
 const STRIPE_KEY = Deno.env.get("STRIPE_SECRET_KEY") ?? "";
 const STRIPE_WH = Deno.env.get("STRIPE_WEBHOOK_SECRET") ?? "";
+// An unsalted hash of an IPv4 address is reversible by brute force in minutes, so
+// "one-way" would have been untrue. Salted with a secret already present in the
+// environment; set SOKRA_IP_SALT to rotate it independently.
+const IP_SALT = Deno.env.get("SOKRA_IP_SALT") ?? Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 const MAX_FILES = 6;
 const MAX_BYTES = 15 * 1024 * 1024;
 const IMG = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
@@ -141,6 +145,25 @@ async function markPaid(sess: Record<string, any>): Promise<string | null> {
   } catch (e) { await log("docs_error", caseId, { msg: (e as Error).message }); }
   return caseId;
 }
+// The privacy policy promises analyses are removed after 24 months. Nothing used to
+// implement that, so retention was in fact indefinite. Runs daily off the existing
+// follow-up cron. The row survives so aggregate outcome stats hold; everything that
+// identifies a person or describes their bill is erased.
+async function purgeExpired(): Promise<number> {
+  try {
+    const r = await sql`update sokra.cases
+      set analysis = null, context = null, files = null, email = null, docs = null,
+          provider = null, ua = null, ip_hash = null, deleted_at = coalesce(deleted_at, now())
+      where created_at < now() - interval '24 months'
+        and (analysis is not null or context is not null or email is not null or provider is not null)
+      returning id`;
+    // Funnel pings are operational telemetry, not records.
+    await sql`delete from sokra.events where kind = 'visit' and at < now() - interval '90 days'`;
+    if (r.length) await log("purge", null, { cases: r.length });
+    return r.length;
+  } catch (e) { await log("purge_error", null, { msg: (e as Error).message }); return -1; }
+}
+
 async function verifyStripeSig(payload: string, header: string): Promise<boolean> {
   if (!STRIPE_WH) return false;
   const parts = Object.fromEntries(header.split(",").map((kv) => kv.split("=") as [string, string]));
@@ -409,7 +432,7 @@ Deno.serve(async (req) => {
     const STEPS = new Set(["landing", "file_picked", "sample", "pricing", "plan_view", "pro_shown", "pro_clicked"]);
     if (!b.step || !STEPS.has(b.step)) return json({ ok: true });
     const ip = req.headers.get("x-forwarded-for")?.split(",")[0].trim() ?? "";
-    const ipHash = ip ? (await sha(ip)).slice(0, 32) : null;
+    const ipHash = ip ? (await sha(IP_SALT + "|" + ip)).slice(0, 32) : null;
     await log("visit", null, { step: b.step, ref: (b.ref ?? "").toString().slice(0, 80) || null, ip: ipHash });
     return json({ ok: true });
   }
@@ -434,7 +457,12 @@ Deno.serve(async (req) => {
     const r = await sql`select files from sokra.cases where id = ${b.id}`;
     const paths = ((r[0]?.files as { path?: string }[] | null) ?? []).map((f) => f.path).filter((p): p is string => !!p);
     if (paths.length) await storage().remove(paths);
-    await sql`update sokra.cases set analysis = null, files = null, context = null, email = null, docs = null, deleted_at = now() where id = ${b.id}`;
+    // Clear everything that describes the person or their bill, not just the analysis —
+    // the provider name and IP hash alone were enough to say who had which debt.
+    await sql`update sokra.cases set analysis = null, files = null, context = null, email = null, docs = null,
+      provider = null, ua = null, ip_hash = null, total_cents = null,
+      est_reduction_low_cents = null, est_reduction_high_cents = null, deleted_at = now() where id = ${b.id}`;
+    await sql`delete from sokra.events where case_id = ${b.id}`;
     await log("delete", b.id);
     return json({ ok: true });
   }
@@ -453,7 +481,15 @@ Deno.serve(async (req) => {
       if (ok) { sent++; await sql`update sokra.cases set followup_sent_at = now() where id = ${c.id}`; }
     }
     await log("followup_run", null, { sent });
-    return json({ ok: true, sent });
+    return json({ ok: true, sent, purged: await purgeExpired() });
+  }
+
+  // retention, run from the same daily cron as /followup so it needs no new schedule
+  if (path === "/purge") {
+    const tok = req.headers.get("x-cron-token") ?? "";
+    const want = await cfg("cron_token_sha256");
+    if (!tok || !want || (await sha(tok)) !== want) return json({ error: "unauthorized" }, 401);
+    return json({ ok: true, purged: await purgeExpired() });
   }
 
   // ── analyze ────────────────────────────────────────────────────────────────
@@ -477,6 +513,9 @@ Deno.serve(async (req) => {
     household: g("household", 3).replace(/[^0-9]/g, "") || null,
     state: g("state", 2).toUpperCase() || null,
     insured: g("insured", 3) || null,
+    // What the person is trying to achieve changes the right advice entirely — a
+    // time-barred debt is "won" on dollars and still sinks a mortgage application.
+    goal: ["credit", "sued", "cant_pay", "gone"].includes(g("goal", 10)) ? g("goal", 10) : null,
     notes: g("notes", 1500) || null,
   };
   const emailRaw = g("email").toLowerCase();
@@ -485,7 +524,7 @@ Deno.serve(async (req) => {
   const source = g("source", 80) || null;
   const ua = (req.headers.get("user-agent") ?? "").slice(0, 200);
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0].trim() ?? "";
-  const ipHash = ip ? (await sha(ip)).slice(0, 32) : null;
+  const ipHash = ip ? (await sha(IP_SALT + "|" + ip)).slice(0, 32) : null;
 
   if (ipHash) {
     const since = new Date(Date.now() - 3600_000).toISOString();
@@ -510,6 +549,11 @@ Deno.serve(async (req) => {
     ctx.household ? `Household size: ${ctx.household}` : null,
     ctx.state ? `State: ${ctx.state}` : null,
     ctx.insured ? `Has health insurance: ${ctx.insured}` : null,
+    ctx.goal ? `What they are trying to achieve (optimise for THIS, not for the biggest dollar number): ${
+      { credit: "protect or repair their credit report — they may be applying for a mortgage or loan",
+        sued: "they are being sued, garnished, or threatened with it",
+        cant_pay: "they cannot cover essentials right now — cash flow comes first",
+        gone: "they just want the balance gone" }[ctx.goal] }` : null,
     ctx.notes ? `Notes from the person: ${ctx.notes}` : null,
   ].filter(Boolean);
   content.push({ type: "text", text:

@@ -25,6 +25,7 @@
   <div id="intake">
     <h1 class="h1-tight">Upload the bill.<br>Get the <em>exact words</em><br>that lower it.</h1>
     <p class="lede lede-short">Medical, credit card, collections, utilities, phone. Free. No account.</p>
+    <p class="lede-cta"><a href="./sample.html">See a finished plan first →</a> <span>Real format, made-up names. Nothing to enter.</span></p>
 
     <div class="card">
       <div class="drop" id="drop">
@@ -41,18 +42,27 @@
           <span class="ctx-why">They decide if you qualify for help</span>
         </div>
         <div class="grid">
-          <div><label>Household income / year</label><input type="text" id="income" inputmode="numeric" placeholder="36,000"></div>
-          <div><label>People in household</label><input type="number" id="household" min="1" max="12" placeholder="2"></div>
+          <div><label for="income">Household income before tax, per year</label><input type="text" id="income" inputmode="numeric" placeholder="36,000" aria-describedby="income_help"><span class="ctx-why" id="income_help">Yearly, not monthly. A rough number is fine.</span></div>
+          <div><label for="household">People in household</label><input type="number" id="household" min="1" max="12" placeholder="2"></div>
         </div>
+        <div style="margin-top:12px"><label for="goal">What matters most to you here?</label>
+          <select id="goal">
+            <option value="gone">I just want the balance gone</option>
+            <option value="credit">Protecting my credit — I'm applying for a loan or mortgage</option>
+            <option value="cant_pay">I can't cover rent, food or medicine right now</option>
+            <option value="sued">I'm being sued, garnished, or threatened with it</option>
+          </select>
+          <span class="ctx-why">This changes the advice. Paying a bill off can lower the balance and still hurt your credit.</span>
+        </div>
+        <label class="check" style="margin-top:14px"><input type="checkbox" id="consent_store"> <span>Keep a copy of my bill so I can come back to it. Leave this off and your photo is deleted after it's read — your plan still works.</span></label>
         <details class="ctx more">
           <summary>More details (optional)</summary>
           <div class="grid">
-            <div><label>State</label><input type="text" id="state" maxlength="2" placeholder="FL" style="text-transform:uppercase"></div>
-            <div><label>Health insurance?</label><select id="insured"><option value="">—</option><option value="yes">Yes</option><option value="no">No</option></select></div>
+            <div><label for="state">State</label><input type="text" id="state" maxlength="2" placeholder="FL" style="text-transform:uppercase"></div>
+            <div><label for="insured">Do you have health insurance?</label><select id="insured"><option value="">Not sure / not relevant</option><option value="yes">Yes</option><option value="no">No</option></select></div>
           </div>
-          <div style="margin-top:12px"><label>Anything else</label><textarea id="notes" placeholder="e.g. This was an ER visit. A collector already wrote to me. I lost my job in June."></textarea></div>
-          <div style="margin-top:12px" id="email_row" hidden><label>Email — we'll send your plan and check in once in two weeks</label><input type="email" id="email" placeholder="you@example.com"></div>
-          <label class="check"><input type="checkbox" id="consent_store"> <span>Keep a copy of my bill so I can come back to it. Off = analyzed and discarded.</span></label>
+          <div style="margin-top:12px"><label for="notes">Anything else</label><textarea id="notes" placeholder="e.g. This was an ER visit. A collector already wrote to me. I lost my job in June."></textarea></div>
+          <div style="margin-top:12px" id="email_row" hidden><label for="email">Email — we'll send your plan and check in once in two weeks</label><input type="email" id="email" placeholder="you@example.com"></div>
         </details>
       </div>
 
@@ -63,16 +73,17 @@
 
     <!-- proof strip -->
     <div class="proof">
-      <div class="proof-item"><div class="proof-n">80%</div><div class="proof-l">of hospital bills contain errors</div></div>
-      <div class="proof-item"><div class="proof-n">29%</div><div class="proof-l">of eligible patients ever get the charity care they're owed</div></div>
-      <div class="proof-item"><div class="proof-n">$0</div><div class="proof-l">Sokra takes from your savings — ever</div></div>
+      <div class="proof-item"><div class="proof-n">$0</div><div class="proof-l">Sokra never takes a cut of what you save. Bill negotiators take 18–25%.</div></div>
+      <div class="proof-item"><div class="proof-n">240</div><div class="proof-l">days a nonprofit hospital must keep accepting your financial-assistance application — far longer than most people are told <a href="https://www.irs.gov/charities-non-profits/charitable-hospitals-general-requirements-for-tax-exemption-under-section-501r" rel="noopener">(IRS 501(r))</a></div></div>
+      <div class="proof-item"><div class="proof-n">1 in 2</div><div class="proof-l">US adults carry medical or other consumer debt they don't know how to challenge. Most never ask.</div></div>
     </div>
 
     <section>
       <div class="sec">What you get back</div>
       <div class="what">
-        <div class="what-item"><b>The errors on the bill.</b> Duplicate charges, unbundled items, math that doesn't add up.</div>
-        <div class="what-item"><b>Every way to reduce it, ranked by dollars.</b> Charity care you qualify for. Hardship programs nobody mentioned. Illegal balance bills. Dispute windows still open.</div>
+        <div class="what-item"><b>What looks wrong on the bill.</b> Charges that appear twice, quantities that don't match the visit, fees added after the date they were due, maths that doesn't add up.</div>
+        <div class="what-item"><b>Every way to lower it, biggest first.</b> Financial assistance you may qualify for. Hardship programs nobody mentions. Charges the law may not allow. Deadlines that haven't closed yet.</div>
+        <div class="what-item"><b>The order to do it in.</b> Some moves cancel out others — paying early can cost you a write-off. Sokra tells you what to do second, not just first.</div>
         <div class="what-item"><b>The exact words.</b> A script to read on the phone tomorrow morning, with a copy button.</div>
         <div class="what-item"><b>What to do first, and by when.</b> One action. Deadlines that matter.</div>
         <div class="what-item"><b>Why it works.</b> So the next bill, you don't need us.</div>
@@ -92,16 +103,16 @@
     </section>
   </div>
 
-  <div id="analyzing" class="hidden">
+  <div id="analyzing" class="hidden" role="status" aria-live="polite">
     <div class="analyzing"><div class="ring"></div>
       <div style="font-family:var(--serif);font-size:22px;margin-bottom:10px">Reading your bill</div>
-      <div class="steps" id="steps">Extracting line items…</div>
+      <div class="steps" id="steps">Reading every line…</div><p class="hint" style="margin-top:10px">This takes about a minute. Please keep this page open — closing or reloading it will lose the analysis.</p>
       <div class="bar"><div class="bar-fill" id="barfill"></div></div></div>
   </div>
 
-  <div id="results" class="hidden"></div>
+  <div id="results" class="hidden" tabindex="-1" aria-label="Your plan"></div>
 
-  <footer><span>Sokra · LLCreativity LLC</span><span><a href="./pricing.html">Pricing</a> · <a href="./privacy.html">Privacy</a> · <a href="./terms.html">Terms</a></span></footer>
+  <footer><span>Sokra is made by <b>LLCreativity LLC</b>, Odessa, Florida · <a href="mailto:sokra@llcreativityllc.com">sokra@llcreativityllc.com</a> · <a href="https://github.com/WealthRxAi/sokra" rel="noopener">read the source</a></span><span><a href="./pricing.html">Pricing</a> · <a href="./privacy.html">Privacy</a> · <a href="./terms.html">Terms</a></span></footer>
 </div>
 <div class="toast" id="toast"></div>
 
@@ -171,6 +182,8 @@ go.addEventListener("click", async () => {
     if (body.id) { history.replaceState(null, "", "./plan.html?id=" + body.id); try { localStorage.setItem("sokra:last", body.id); } catch {} }
     renderPlan($("#results"), body.analysis, body.id, { tier: "free" });
     $("#analyzing").classList.add("hidden"); $("#results").classList.remove("hidden");
+    document.title = "Your plan — Sokra";
+    $("#results").focus({ preventScroll: true });
     window.scrollTo({ top: 0, behavior: "smooth" });
     if (body.emailed) toast("Plan emailed to you");
   } catch(e) {

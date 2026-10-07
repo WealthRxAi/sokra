@@ -5,7 +5,23 @@ window.SOKRA = (() => {
 
   const money = (n) => (n == null || isNaN(n)) ? "—" : "$" + Math.round(n).toLocaleString("en-US");
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-  function toast(t) { const el = $("#toast"); if (!el) return; el.textContent = t; el.classList.add("on"); setTimeout(() => el.classList.remove("on"), 1600); }
+
+  // Copy that reports its own failure instead of doing nothing.
+  async function copyText(text, okMsg, nearEl) {
+    try { await navigator.clipboard.writeText(text); toast(okMsg); return; } catch {}
+    try {
+      const ta = document.createElement("textarea");
+      ta.value = text; ta.setAttribute("readonly", ""); ta.style.position = "fixed"; ta.style.opacity = "0";
+      document.body.appendChild(ta); ta.select(); const ok = document.execCommand("copy"); ta.remove();
+      if (ok) { toast(okMsg); return; }
+    } catch {}
+    // Last resort: select the real text on screen so the person can copy it themselves.
+    const box = nearEl?.closest(".script, .doc")?.querySelector("p, pre");
+    if (box) { const r = document.createRange(); r.selectNodeContents(box); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); }
+    toast("Couldn't copy automatically — the text is selected, hold and choose Copy");
+  }
+
+  function toast(t) { const el = $("#toast"); if (!el) return; el.setAttribute("role","status"); el.setAttribute("aria-live","polite"); el.textContent = t; el.classList.add("on"); setTimeout(() => el.classList.remove("on"), 1600); }
 
   // ── Funnel ping. No cookie, no third-party script, no identity — just which step was
   // reached, so a drop-off between landing and upload is visible. Never blocks a page.
@@ -61,12 +77,17 @@ window.SOKRA = (() => {
     if (a.escalate) h.push(`<div class="esc"><b>Get a human on this.</b> ${esc(a.escalate)}</div>`);
     if (opts.returning && id && opts.outcomeDone == null) h.push(`<div class="outcome-top"><b>Welcome back.</b> Made the call yet? When something comes off, <a href="#outcome" style="color:var(--teal)">tell us the number</a> — it's how we know this works.</div>`);
 
-    if (a.do_first) h.push(`<section><div class="sec">Do this first</div>
+    if (a.do_first) h.push(`<section><h2 class="sec">Do this first</h2>
       <div class="first"><div class="a">${esc(a.do_first.action)}</div><div class="w">${esc(a.do_first.why)}</div><span class="when">${esc(a.do_first.when || "today")}</span></div></section>`);
 
-    if ((a.deadlines || []).length) h.push(`<section><div class="sec">Deadlines</div>${a.deadlines.map((d) => `<div class="dl"><b>${esc(d.what)} — ${esc(d.by)}</b><span>${esc(d.consequence)}</span></div>`).join("")}</section>`);
+    if ((a.deadlines || []).length) h.push(`<section><h2 class="sec">Deadlines</h2>${a.deadlines.map((d) => `<div class="dl"><b>${esc(d.what)} — ${esc(d.by)}</b><span>${esc(d.consequence)}</span></div>`).join("")}</section>`);
 
-    if (levers.length) h.push(`<section><div class="sec">How to reduce it — ranked by impact</div>${levers.map((l, i) => `
+    // A glossary after the jargon has already appeared thirty times is a glossary
+    // nobody reads. This sits above the levers, where the words first turn up.
+    if ((a.plain_words || []).length) h.push(`<section><h2 class="sec">What these words mean</h2><div class="words">${a.plain_words.map((w) => `
+      <div class="word"><b>${esc(w.term)}</b><span>${esc(w.means)}</span></div>`).join("")}</div></section>`);
+
+    if (levers.length) h.push(`<section><h2 class="sec">Ways to lower this bill — biggest first</h2>${levers.map((l, i) => `
       <details class="lever" ${i === 0 ? "open" : ""}>
         <summary>
           <div class="top"><div class="nm">${esc(l.name)}</div><div class="amt">${money(l.reduction_low)}–${money(l.reduction_high)}</div></div>
@@ -74,24 +95,25 @@ window.SOKRA = (() => {
           <div class="meta"><span class="pill conf-${esc(l.confidence)}">${esc(l.confidence)} confidence</span><span class="pill">${esc(l.effort)}</span></div>
         </summary>
         <div class="body">
+          ${l.blocked_by ? `<div class="wait"><b>Wait — don't do this one yet.</b> Finish “${esc(l.blocked_by)}” first.${l.blocked_why ? ` ${esc(l.blocked_why)}` : ""}</div>` : ""}
           ${(l.steps || []).length ? `<ol>${l.steps.map((s) => `<li>${esc(s)}</li>`).join("")}</ol>` : ""}
           ${l.script ? `<div class="script"><div class="lab">Say or send this</div><p>${esc(l.script)}</p><button class="copy" data-copy="${esc(l.script)}">copy</button></div>` : ""}
           ${l.who_to_contact ? `<div class="who">Contact: ${esc(l.who_to_contact)}</div>` : ""}
         </div></details>`).join("")}</section>`);
 
-    if ((a.errors_found || []).length) h.push(`<section><div class="sec">Errors on the bill</div><table>${a.errors_found.map((e) => `
+    if ((a.errors_found || []).length) h.push(`<section><h2 class="sec">What looks wrong on the bill</h2><table>${a.errors_found.map((e) => `
       <tr><td><b>${esc(e.issue)}</b><br><span style="color:var(--ink3);font-size:13px">${esc(e.where)} — ${esc(e.how_to_dispute)}</span></td><td class="r">${money(e.estimated_overcharge)}</td></tr>`).join("")}</table></section>`);
 
-    if ((a.line_items || []).length) h.push(`<section><div class="sec">What Sokra read</div><table>${a.line_items.map((li) => `
+    if ((a.line_items || []).length) h.push(`<section><h2 class="sec">What Sokra read on your bill</h2><table>${a.line_items.map((li) => `
       <tr><td>${esc(li.description)}${li.flag ? `<br><span style="color:#F0A48A;font-size:12px">⚑ ${esc(li.flag)}</span>` : ""}</td><td class="r">${money(li.amount)}</td></tr>`).join("")}</table></section>`);
 
-    if ((a.teach || []).length) h.push(`<section><div class="sec">So you never need this again</div>${a.teach.map((t) => `
+    if ((a.teach || []).length) h.push(`<section><h2 class="sec">So you never need this again</h2>${a.teach.map((t) => `
       <details class="q"><summary class="qq">${esc(t.q)}</summary><p>${esc(t.a)}</p></details>`).join("")}</section>`);
 
     // ── Pro tier
     if (id && opts.pricing?.enabled !== false) {
       if (opts.tier === "pro") {
-        h.push(`<section id="pro"><div class="sec">Your documents</div><div id="docs"><div class="analyzing" style="padding:28px 0"><div class="ring" style="width:36px;height:36px"></div><div class="steps">Writing your letters from this bill…</div></div></div></section>`);
+        h.push(`<section id="pro"><h2 class="sec">Your documents</h2><div id="docs"><div class="analyzing" style="padding:28px 0"><div class="ring" style="width:36px;height:36px"></div><div class="steps">Writing your letters from this bill…</div></div></div></section>`);
       } else {
         const price = opts.pricing?.pro_price_cents ? "$" + (opts.pricing.pro_price_cents / 100).toFixed(0) : "$29";
         const topLever = levers[0]?.name ? esc(levers[0].name) : "the top lever";
@@ -129,14 +151,14 @@ window.SOKRA = (() => {
     h.push(`<a class="btn ghost" href="./">Analyze another bill</a>`);
 
     root.innerHTML = h.join("");
-    root.querySelectorAll(".copy").forEach((b) => b.addEventListener("click", () => navigator.clipboard.writeText(b.dataset.copy).then(() => toast("Copied — go make the call"))));
+    root.querySelectorAll(".copy").forEach((b) => b.addEventListener("click", () => copyText(b.dataset.copy, "Copied — go make the call", b)));
     $("#oc_btn", root)?.addEventListener("click", async () => {
       const amt = $("#oc_amt", root).value.replace(/[^0-9.]/g, ""); if (!amt) return;
       const r = await fetch(API + "/outcome", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ id, amount: +amt }) });
       if (r.ok) { $("#outcome", root).innerHTML = `<div class="t">Thank you.</div><div class="d">${money(+amt)} reported. That's the number that matters.</div>`; }
       else toast("Couldn't save — try again");
     });
-    $("#share_btn", root)?.addEventListener("click", () => navigator.clipboard.writeText(opts.planUrl).then(() => toast("Link copied")));
+    $("#share_btn", root)?.addEventListener("click", () => copyText(opts.planUrl, "Link copied"));
     if ($("#pro_btn", root)) hit("pro_shown");
     $("#pro_btn", root)?.addEventListener("click", async () => {
       hit("pro_clicked");
@@ -190,7 +212,7 @@ window.SOKRA = (() => {
     if ((d.checklist || []).length) h.push(`<details class="doc"><summary><div class="t">Documents to gather</div></summary><div class="body"><div class="cs"><ul>${d.checklist.map((x) => `<li>${esc(x)}</li>`).join("")}</ul></div></div></details>`);
     if ((d.timeline || []).length) h.push(`<details class="doc"><summary><div class="t">Timeline</div></summary><div class="body"><div class="cs"><ul>${d.timeline.map((x) => `<li><b style="display:inline;margin:0 6px 0 0;color:var(--gold)">${esc(x.when)}</b>${esc(x.what)}</li>`).join("")}</ul></div></div></details>`);
     box.innerHTML = h.join("");
-    box.querySelectorAll(".copyb").forEach((b) => b.addEventListener("click", () => navigator.clipboard.writeText(b.dataset.copy).then(() => toast("Letter copied"))));
+    box.querySelectorAll(".copyb").forEach((b) => b.addEventListener("click", () => copyText(b.dataset.copy, "Letter copied", b)));
     box.querySelectorAll(".printb").forEach((b) => b.addEventListener("click", () => { box.querySelectorAll("details").forEach((x) => x.open = true); window.print(); }));
   }
 
