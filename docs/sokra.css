@@ -206,3 +206,8 @@ input[type=text],input[type=number],input[type=email],select,textarea{border-col
 .fap .np b{color:var(--ink)}
 .fap .src{font-size:13px;color:var(--ink3);margin-top:14px}
 .fap .src a{color:var(--gold)}
+.more-pol{margin-top:10px}
+.more-pol summary{cursor:pointer;color:var(--gold);font-size:14px;list-style:none;padding:8px 0}
+.more-pol summary::-webkit-details-marker{display:none}
+.more-pol ul{margin:6px 0 0 18px;color:var(--ink2);font-size:14px;line-height:1.55}
+.more-pol li{margin-bottom:8px}

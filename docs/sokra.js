@@ -40,7 +40,14 @@ window.SOKRA = (() => {
       ${rows.length ? `<table>${rows.map(([k, v]) => `<tr><td>${esc(k)}</td><td class="r">${esc(v)}</td></tr>`).join("")}</table>` : ""}
       ${fp.separate_providers ? `<p class="np"><b>Doctors who bill separately:</b> ${esc(fp.separate_providers)}</p>` : ""}
       ${fp.how_to_apply ? `<p class="np"><b>How to apply:</b> ${esc(fp.how_to_apply)}</p>` : ""}
-      ${fp.notable ? `<p class="np">${esc(fp.notable)}</p>` : ""}
+      ${fp.notable ? (() => {
+        const parts = String(fp.notable).split(/(?=\(\d+\)\s)/).map((x) => x.trim()).filter(Boolean);
+        if (parts.length < 3) return `<p class="np">${esc(fp.notable)}</p>`;
+        const first = parts[0].replace(/^\(\d+\)\s*/, "");
+        return `<p class="np">${esc(first)}</p>
+          <details class="more-pol"><summary>${parts.length - 1} more details from the policy</summary>
+          <ul>${parts.slice(1).map((x) => `<li>${esc(x.replace(/^\(\d+\)\s*/, ""))}</li>`).join("")}</ul></details>`;
+      })() : ""}
       <p class="src">Read from ${fp.source_url ? `<a href="${esc(fp.source_url)}" rel="noopener" target="_blank">the hospital's own policy</a>` : "the hospital's own policy"}${fp.checked_on ? ` on ${esc(fp.checked_on)}` : ""}. Policies change — confirm the numbers when you call.</p>
     </div>`;
   }
@@ -104,7 +111,7 @@ window.SOKRA = (() => {
     h.push(`<div class="hero">
       <div class="k">${esc(a.provider || "Your bill")} · ${esc((a.bill_type || "").replace(/_/g, " "))}</div>
       <div class="n">${money(lo)}–${money(hi)} <small>could come off</small></div>
-      <div class="sub">of ${money(tot)} total${pct ? ` — up to ${pct}%` : ""}. ${a.image_quality === "poor" ? "" : esc(a.summary || "")}</div>
+      <div class="sub">of ${money(tot)} total${pct && pct <= 80 ? ` — up to ${pct}%` : ""}. ${a.image_quality === "poor" ? "" : esc(a.summary || "")}</div>
       <div class="row">
         ${a.due_date ? `<span class="pill">Due ${esc(a.due_date)}</span>` : ""}
         ${a.in_collections ? `<span class="pill warn">In collections</span>` : ""}
