@@ -60,6 +60,31 @@ function b64(buf: ArrayBuffer) {
   for (let i = 0; i < bytes.length; i += CH) s += String.fromCharCode(...bytes.subarray(i, i + CH));
   return btoa(s);
 }
+// Claude occasionally runs to the token ceiling mid-JSON. Rather than lose a good
+// analysis, truncate back to the last point the document could legally close and
+// shut the root object. The fast path is an ordinary parse.
+function parseLooseJson(raw: string): Record<string, unknown> {
+  const m = raw.match(/\{[\s\S]*\}/);
+  if (m) { try { return JSON.parse(m[0]); } catch { /* truncated — repair below */ } }
+  const start = raw.indexOf("{");
+  if (start < 0) throw new Error("no json object in response");
+  const s = raw.slice(start);
+  const stack: string[] = [];
+  let inStr = false, esc = false, cut = -1, cutStack: string[] = [];
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i];
+    if (inStr) { if (esc) esc = false; else if (ch === "\\") esc = true; else if (ch === '"') inStr = false; continue; }
+    if (ch === '"') inStr = true;
+    else if (ch === "{" || ch === "[") stack.push(ch);
+    else if (ch === "}" || ch === "]") { stack.pop(); if (stack.length) { cut = i + 1; cutStack = [...stack]; } }
+    else if (ch === "," && stack.length) { cut = i; cutStack = [...stack]; }
+  }
+  if (cut < 0) throw new Error("response truncated too early to salvage");
+  let out = s.slice(0, cut).replace(/,\s*$/, "");
+  for (let i = cutStack.length - 1; i >= 0; i--) out += cutStack[i] === "{" ? "}" : "]";
+  return JSON.parse(out);
+}
+
 const money = (c: number | null | undefined) => c == null ? "—" : "$" + Math.round(c / 100).toLocaleString("en-US");
 const isUuid = (s: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s);
 
@@ -98,11 +123,11 @@ async function verifyStripeSig(payload: string, header: string): Promise<boolean
 }
 
 // ─── Claude text call (for Pro docs) ─────────────────────────────────────────
-async function claudeText(system: string, user: string, maxTokens = 4000): Promise<string> {
+async function claudeText(system: string, user: string, maxTokens = 12000): Promise<string> {
   const r = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: anthropicHeaders(),
-    body: JSON.stringify({ model: MODEL, max_tokens: maxTokens, temperature: 0.2, system, messages: [{ role: "user", content: user }] }),
+    body: JSON.stringify({ model: MODEL, max_tokens: maxTokens, system, messages: [{ role: "user", content: user }] }),
   });
   const b = await r.json();
   if (!r.ok) throw new Error(b?.error?.message ?? "claude error");
@@ -141,8 +166,7 @@ Always produce the call sheet, checklist and timeline.`;
 
 async function generateDocs(analysis: Record<string, unknown>, ctx: Record<string, unknown>) {
   const raw = await claudeText(DOCS_SYSTEM, `Analysis JSON:\n${JSON.stringify(analysis)}\n\nPerson's context: ${JSON.stringify(ctx ?? {})}\nToday: ${new Date().toISOString().slice(0, 10)}`);
-  const m = raw.match(/\{[\s\S]*\}/);
-  return JSON.parse(m ? m[0] : raw);
+  return parseLooseJson(raw);
 }
 
 // Fallback if the playbook row is missing — keeps the product alive, less sharp.
@@ -439,16 +463,17 @@ Deno.serve(async (req) => {
     `Today's date: ${new Date().toISOString().slice(0, 10)}.` });
 
   const t0 = Date.now();
-  let raw = ""; let usage: { input_tokens?: number; output_tokens?: number } = {};
+  let raw = ""; let stop = ""; let usage: { input_tokens?: number; output_tokens?: number } = {};
   try {
     const r = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: anthropicHeaders(),
-      body: JSON.stringify({ model: MODEL, max_tokens: 6000, temperature: 0.2, system: playbook, messages: [{ role: "user", content }] }),
+      body: JSON.stringify({ model: MODEL, max_tokens: 16000, system: playbook, messages: [{ role: "user", content }] }),
     });
     const body = await r.json();
     if (!r.ok) { await log("api_error", null, { status: r.status, msg: body?.error?.message }); return json({ error: "The analysis engine had a problem. Please try again in a minute." }, 502); }
     raw = (body.content ?? []).filter((c: { type: string }) => c.type === "text").map((c: { text: string }) => c.text).join("");
+    stop = body.stop_reason ?? "";
     usage = body.usage ?? {};
   } catch (e) {
     await log("api_unreachable", null, { msg: (e as Error).message });
@@ -457,8 +482,15 @@ Deno.serve(async (req) => {
   const latency = Date.now() - t0;
 
   let analysis: Record<string, unknown>;
-  try { const m = raw.match(/\{[\s\S]*\}/); analysis = JSON.parse(m ? m[0] : raw); }
-  catch { await log("parse_error", null, { head: raw.slice(0, 300) }); return json({ error: "Couldn't read that clearly. Try a sharper, straight-on photo with the total visible." }, 500); }
+  try { analysis = parseLooseJson(raw); }
+  catch (e) { await log("parse_error", null, { stop, chars: raw.length, msg: (e as Error).message, head: raw.slice(0, 300) }); return json({ error: "Couldn't read that clearly. Try a sharper, straight-on photo with the total visible." }, 500); }
+  if (stop === "max_tokens") {
+    // A salvaged response can end on a half-written lever; a lever with no script is
+    // worse than no lever, so drop the trailing partial.
+    const lv = analysis.levers as { script?: string }[] | undefined;
+    if (Array.isArray(lv) && lv.length && !lv[lv.length - 1]?.script) lv.pop();
+    await log("truncated", null, { chars: raw.length, levers: lv?.length });
+  }
 
   const cents = (n: unknown) => (typeof n === "number" && isFinite(n) ? Math.round(n * 100) : null);
   let id: string | undefined;
