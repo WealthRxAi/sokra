@@ -29,6 +29,12 @@ const sql = postgres(Deno.env.get("SUPABASE_DB_URL")!, { prepare: false, max: 2,
 
 const MODEL = Deno.env.get("SOKRA_MODEL") ?? "claude-sonnet-5-5";
 const ANTHROPIC_KEY = Deno.env.get("ANTHROPIC_API_KEY") ?? "";
+// Org-level (non-workspace-scoped) keys must name a workspace. Optional for workspace-scoped keys.
+const ANTHROPIC_WS = Deno.env.get("ANTHROPIC_WORKSPACE_ID") ?? "";
+const anthropicHeaders = () => ({
+  "x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01", "content-type": "application/json",
+  ...(ANTHROPIC_WS ? { "anthropic-workspace-id": ANTHROPIC_WS } : {}),
+});
 const RESEND_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
 const FROM = Deno.env.get("SOKRA_FROM") ?? "Sokra <sokra@llcreativityllc.com>";
 const STRIPE_KEY = Deno.env.get("STRIPE_SECRET_KEY") ?? "";
@@ -95,7 +101,7 @@ async function verifyStripeSig(payload: string, header: string): Promise<boolean
 async function claudeText(system: string, user: string, maxTokens = 4000): Promise<string> {
   const r = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
-    headers: { "x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01", "content-type": "application/json" },
+    headers: anthropicHeaders(),
     body: JSON.stringify({ model: MODEL, max_tokens: maxTokens, temperature: 0.2, system, messages: [{ role: "user", content: user }] }),
   });
   const b = await r.json();
@@ -185,7 +191,11 @@ Deno.serve(async (req) => {
   if (req.method === "GET" && (path === "/" || path === "/health")) {
     let pb = false, dbOk = false;
     try { pb = !!(await cfg("playbook")); dbOk = true; } catch { /* db down */ }
-    return json({ ok: true, db: dbOk, has_key: !!ANTHROPIC_KEY, has_email: !!RESEND_KEY, has_stripe: !!STRIPE_KEY && !!STRIPE_WH, has_playbook: pb, model: MODEL });
+    // secret NAMES present (never values) — helps diagnose a mistyped key name
+    const names = Object.keys(Deno.env.toObject()).filter((k) => /ANTHROPIC|STRIPE|RESEND|SOKRA/i.test(k)).sort();
+    let lastErr: unknown = null;
+    try { const e = await sql`select meta, at from sokra.events where kind in ('api_error','api_unreachable','parse_error') order by at desc limit 1`; lastErr = e[0] ?? null; } catch { /* ignore */ }
+    return json({ ok: true, db: dbOk, has_key: !!ANTHROPIC_KEY, has_workspace: !!ANTHROPIC_WS, has_email: !!RESEND_KEY, has_stripe: !!STRIPE_KEY && !!STRIPE_WH, has_playbook: pb, model: MODEL, secret_names: names, last_engine_error: lastErr });
   }
 
   // pricing
@@ -433,7 +443,7 @@ Deno.serve(async (req) => {
   try {
     const r = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
-      headers: { "x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01", "content-type": "application/json" },
+      headers: anthropicHeaders(),
       body: JSON.stringify({ model: MODEL, max_tokens: 6000, temperature: 0.2, system: playbook, messages: [{ role: "user", content }] }),
     });
     const body = await r.json();
