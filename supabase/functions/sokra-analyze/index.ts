@@ -307,6 +307,11 @@ Deno.serve(async (req) => {
     const perDay: Record<string, number> = {};
     for (const x of live) { const d = day(new Date(x.created_at).toISOString()); perDay[d] = (perDay[d] ?? 0) + 1; }
     const avgLatency = live.length ? Math.round(live.reduce((a, x) => a + (Number(x.latency_ms) || 0), 0) / live.length) : 0;
+    // Funnel: how many got to each step, and how many distinct people that was.
+    const funnel = await sql`select meta->>'step' as step, count(*)::int as hits, count(distinct meta->>'ip')::int as people
+      from sokra.events where kind = 'visit' group by 1` as unknown as Array<{ step: string; hits: number; people: number }>;
+    const steps: Record<string, { hits: number; people: number }> = {};
+    for (const f of funnel) steps[f.step] = { hits: f.hits, people: f.people };
     // rough cost: sonnet-class pricing ~$3/M in, $15/M out
     const cost = live.reduce((a, x) => a + ((Number(x.tokens_in) || 0) * 3 + (Number(x.tokens_out) || 0) * 15) / 1e6, 0);
     return json({
@@ -320,6 +325,7 @@ Deno.serve(async (req) => {
       revenue_cents: live.reduce((a, x) => a + (Number(x.amount_paid_cents) || 0), 0),
       reported_reduced_cents: outcomes.reduce((a, x) => a + (Number(x.outcome_reported_cents) || 0), 0),
       by_type: byType, per_day: perDay, avg_latency_ms: avgLatency, est_api_cost_usd: +cost.toFixed(2),
+      funnel: steps,
       has_key: !!ANTHROPIC_KEY, has_email: !!RESEND_KEY, has_stripe: !!STRIPE_KEY, has_stripe_webhook: !!STRIPE_WH, model: MODEL,
     });
   }
@@ -391,6 +397,21 @@ Deno.serve(async (req) => {
       await markPaid(ev.data.object);
     }
     return json({ received: true });
+  }
+
+  // funnel ping — no cookie, no account, no third party. We record which step of the
+  // funnel was reached and a one-way hash of the IP so "unique visitors" is countable
+  // without ever storing who. Unknown steps are dropped so this can't be spammed into
+  // an arbitrary event log.
+  if (path === "/hit") {
+    let b: { step?: string; ref?: string } = {};
+    try { b = await req.json(); } catch { return json({ ok: true }); }
+    const STEPS = new Set(["landing", "file_picked", "sample", "pricing", "plan_view", "pro_shown", "pro_clicked"]);
+    if (!b.step || !STEPS.has(b.step)) return json({ ok: true });
+    const ip = req.headers.get("x-forwarded-for")?.split(",")[0].trim() ?? "";
+    const ipHash = ip ? (await sha(ip)).slice(0, 32) : null;
+    await log("visit", null, { step: b.step, ref: (b.ref ?? "").toString().slice(0, 80) || null, ip: ipHash });
+    return json({ ok: true });
   }
 
   // outcome

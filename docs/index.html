@@ -107,7 +107,8 @@
 
 <script src="./sokra.js"></script>
 <script>
-const { API, $, prepare, renderPlan, toast, install } = SOKRA;
+const { API, $, prepare, renderPlan, toast, install, hit } = SOKRA;
+hit("landing");
 const filesIn = $("#files"), thumbs = $("#thumbs"), go = $("#go"), err = $("#err"), drop = $("#drop");
 let picked = [];
 
@@ -117,7 +118,7 @@ async function take(list){
   const raw = [...list].slice(0, 6);
   try { picked = await Promise.all(raw.map(prepare)); } catch(e){ picked = []; showErr(e.message); }
   render();
-  if (picked.length) { go.scrollIntoView({ behavior: "smooth", block: "center" }); $("#income").focus({ preventScroll: true }); }
+  if (picked.length) { hit("file_picked"); go.scrollIntoView({ behavior: "smooth", block: "center" }); $("#income").focus({ preventScroll: true }); }
 }
 filesIn.addEventListener("change", () => take(filesIn.files));
 ["dragenter","dragover"].forEach(e => drop.addEventListener(e, ev => { ev.preventDefault(); drop.classList.add("over"); }));

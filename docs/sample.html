@@ -17,6 +17,7 @@
 </div>
 <div class="toast" id="toast"></div>
 <script src="./sokra.js"></script>
+<script>SOKRA.hit("sample");</script>
 <script>
 fetch("./sample-plan.json").then(r => r.json()).then(a => { SOKRA.renderPlan(document.getElementById("results"), a, null, { tier: "free", pricing: { enabled: false } }); });
 </script>

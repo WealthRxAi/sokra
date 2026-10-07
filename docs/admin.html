@@ -21,6 +21,8 @@
   <div id="dash" class="hidden">
     <div class="row" id="health"></div>
     <div class="stats" id="stats"></div>
+    <section><div class="sec">Funnel — people, not pageviews</div><div style="overflow:auto"><table id="funnel"></table></div>
+      <p class="hint">Each row counts distinct visitors. The biggest fall between two rows is the thing to fix next.</p></section>
     <section><div class="sec">By bill type</div><div id="types" class="row"></div></section>
     <section><div class="sec">Recent cases</div><div style="overflow:auto"><table id="cases"></table></div></section>
     <p class="hint" style="margin-top:20px">Reported $ reduced is the only metric that matters. Everything else is instrumentation.</p>
@@ -63,6 +65,26 @@ async function load(){
   ];
   $("#stats").innerHTML = st.map(([l, v, cls]) => `<div class="stat ${cls}"><div class="v">${v}</div><div class="l">${l}</div></div>`).join("");
   $("#types").innerHTML = Object.entries(s.by_type).sort((a, b) => b[1] - a[1]).map(([k, v]) => `<span class="pill">${esc(k)} · ${v}</span>`).join("") || `<span class="hint">No cases yet.</span>`;
+
+  // Funnel. Analyses and purchases come from cases, the rest from visit pings.
+  const f = s.funnel || {};
+  const p = (k) => (f[k]?.people ?? 0);
+  const STEPS = [
+    ["Landed on the site", p("landing")],
+    ["Picked a bill to upload", p("file_picked")],
+    ["Got a finished plan", s.cases ?? 0],
+    ["Saw the $29 offer", p("pro_shown")],
+    ["Clicked buy", p("pro_clicked")],
+    ["Paid", s.pro_cases ?? 0],
+  ];
+  const top = STEPS[0][1] || 0;
+  $("#funnel").innerHTML = `<tr><th>Step</th><th class="r">People</th><th class="r">Of all visitors</th><th class="r">Kept from step above</th></tr>` +
+    STEPS.map(([label, n], i) => {
+      const prev = i ? STEPS[i - 1][1] : n;
+      return `<tr><td>${label}</td><td class="r">${n}</td>
+        <td class="r">${top ? Math.round(n / top * 100) + "%" : "—"}</td>
+        <td class="r" style="color:${i && prev && n / prev < 0.3 ? "#F0A48A" : "var(--ink3)"}">${i ? (prev ? Math.round(n / prev * 100) + "%" : "—") : ""}</td></tr>`;
+    }).join("");
 
   const rows = (c.cases || []);
   $("#cases").innerHTML = `<tr><th>When</th><th>Type</th><th>Provider</th><th class="r">Total</th><th class="r">Est.</th><th class="r">Reported</th><th>Tier</th><th>Email</th><th>Src</th><th class="r">ms</th><th></th></tr>` +

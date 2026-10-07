@@ -7,6 +7,17 @@ window.SOKRA = (() => {
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   function toast(t) { const el = $("#toast"); if (!el) return; el.textContent = t; el.classList.add("on"); setTimeout(() => el.classList.remove("on"), 1600); }
 
+  // ── Funnel ping. No cookie, no third-party script, no identity — just which step was
+  // reached, so a drop-off between landing and upload is visible. Never blocks a page.
+  function hit(step) {
+    try {
+      fetch(API + "/hit", {
+        method: "POST", headers: { "Content-Type": "application/json" }, keepalive: true,
+        body: JSON.stringify({ step, ref: new URLSearchParams(location.search).get("ref") || (document.referrer || "").slice(0, 80) || null }),
+      }).catch(() => {});
+    } catch {}
+  }
+
   // ── Image pipeline: HEIC/oversized phone photos → ≤1800px JPEG. PDFs pass through.
   async function prepare(file) {
     if (file.type === "application/pdf") return file;
@@ -126,7 +137,9 @@ window.SOKRA = (() => {
       else toast("Couldn't save — try again");
     });
     $("#share_btn", root)?.addEventListener("click", () => navigator.clipboard.writeText(opts.planUrl).then(() => toast("Link copied")));
+    if ($("#pro_btn", root)) hit("pro_shown");
     $("#pro_btn", root)?.addEventListener("click", async () => {
+      hit("pro_clicked");
       const b = $("#pro_btn", root); b.disabled = true; b.textContent = "Opening secure checkout…";
       try {
         const r = await fetch(API + "/checkout", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ id }) });
@@ -187,5 +200,5 @@ window.SOKRA = (() => {
   window.addEventListener("beforeinstallprompt", (e) => { e.preventDefault(); deferredInstall = e; const el = $("#install"); if (el) el.style.display = "block"; });
   function install() { if (deferredInstall) { deferredInstall.prompt(); deferredInstall = null; } }
 
-  return { API, $, money, esc, toast, prepare, renderPlan, install, loadDocs };
+  return { API, $, money, esc, toast, prepare, renderPlan, install, loadDocs, hit };
 })();

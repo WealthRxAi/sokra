@@ -24,6 +24,7 @@
 <script src="./sokra.js"></script>
 <script>
 const { API, $, renderPlan } = SOKRA;
+SOKRA.hit("plan_view");
 const id = new URLSearchParams(location.search).get("id") || (()=>{ try { return localStorage.getItem("sokra:last"); } catch { return null; } })();
 (async () => {
   if (!id) { $("#state").innerHTML = `<div class="card"><b>No plan here.</b><p class="hint">Open the link from your email, or analyze a bill.</p><a class="btn ghost" href="./">Analyze a bill</a></div>`; return; }
