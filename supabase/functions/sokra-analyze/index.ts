@@ -224,6 +224,20 @@ async function generateDocs(analysis: Record<string, unknown>, ctx: Record<strin
 }
 
 // Fallback if the playbook row is missing — keeps the product alive, less sharp.
+// A hard output budget, appended to whatever playbook is configured. This is a
+// system constraint rather than advice, so it lives in code: the richer playbook
+// made the model verbose enough to hit the token ceiling and lose its own levers,
+// and a plan that ends mid-sentence is worth nothing.
+const OUTPUT_BUDGET = `
+
+LENGTH BUDGET — you have a hard output ceiling. Running long gets the plan truncated and helps nobody. Stay well inside these:
+- At most 5 levers. Pick the ones that actually move money or protect the person; drop the rest. Four good ones beat seven.
+- Each lever: applies_because under 60 words, at most 6 steps, script under 150 words.
+- At most 6 teach Q&As, answers under 70 words. At most 8 plain_words entries, only terms you actually used.
+- line_items: if the bill has more than 20 lines, include the ones you flagged plus the largest few, and say so in summary.
+- summary is 2 sentences. Never repeat in a lever what you already said in summary or do_first.
+Completeness of the JSON matters more than completeness of the advice.`;
+
 const FALLBACK_PLAYBOOK = `You are Sokra, a financial advocate. Read the uploaded bill, find errors, list every realistic way to reduce it with exact scripts, say what to do first, flag deadlines, and teach 3 short Q&As. Education, not legal advice. Respond with ONLY a JSON object with keys: bill_type, provider, total_amount, currency, due_date, in_collections, summary, estimated_reduction_low, estimated_reduction_high, do_first{action,why,when}, deadlines[], errors_found[], levers[{name,applies_because,reduction_low,reduction_high,confidence,effort,steps[],script,who_to_contact}], line_items[], teach[{q,a}], escalate, disclaimer, image_quality.`;
 
 // ─── email ───────────────────────────────────────────────────────────────────
@@ -532,7 +546,7 @@ Deno.serve(async (req) => {
     if ((c[0]?.n ?? 0) >= 8) return json({ error: "That's a lot of bills from one connection. Try again in an hour." }, 429);
   }
 
-  const playbook = (await cfg("playbook")) ?? FALLBACK_PLAYBOOK;
+  const playbook = ((await cfg("playbook")) ?? FALLBACK_PLAYBOOK) + OUTPUT_BUDGET;
 
   const content: unknown[] = [];
   const buffers: { f: File; buf: ArrayBuffer }[] = [];
@@ -567,7 +581,7 @@ Deno.serve(async (req) => {
     const r = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: anthropicHeaders(),
-      body: JSON.stringify({ model: MODEL, max_tokens: 16000, system: playbook, messages: [{ role: "user", content }] }),
+      body: JSON.stringify({ model: MODEL, max_tokens: 32000, system: playbook, messages: [{ role: "user", content }] }),
     });
     const body = await r.json();
     if (!r.ok) { await log("api_error", null, { status: r.status, msg: body?.error?.message }); return json({ error: "The analysis engine had a problem. Please try again in a minute." }, 502); }
