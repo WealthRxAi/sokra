@@ -51,7 +51,7 @@
             <div><label>Health insurance?</label><select id="insured"><option value="">—</option><option value="yes">Yes</option><option value="no">No</option></select></div>
           </div>
           <div style="margin-top:12px"><label>Anything else</label><textarea id="notes" placeholder="e.g. This was an ER visit. A collector already wrote to me. I lost my job in June."></textarea></div>
-          <div style="margin-top:12px"><label>Email — we'll send your plan and check in once in two weeks</label><input type="email" id="email" placeholder="you@example.com"></div>
+          <div style="margin-top:12px" id="email_row" hidden><label>Email — we'll send your plan and check in once in two weeks</label><input type="email" id="email" placeholder="you@example.com"></div>
           <label class="check"><input type="checkbox" id="consent_store"> <span>Keep a copy of my bill so I can come back to it. Off = analyzed and discarded.</span></label>
         </details>
       </div>
@@ -124,6 +124,11 @@ filesIn.addEventListener("change", () => take(filesIn.files));
 ["dragleave","drop"].forEach(e => drop.addEventListener(e, ev => { ev.preventDefault(); drop.classList.remove("over"); }));
 drop.addEventListener("drop", ev => take(ev.dataTransfer.files));
 $("#install_btn").addEventListener("click", e => { e.preventDefault(); install(); });
+
+// Only ask for an email if the backend can actually send one. Collecting an address
+// against a promise we can't keep is worse than not asking. Turns itself back on the
+// moment RESEND_API_KEY is set — no redeploy of this page needed.
+fetch(API + "/health").then(r => r.json()).then(h => { if (h.has_email) $("#email_row").hidden = false; }).catch(() => {});
 
 function render(){
   thumbs.innerHTML = "";
