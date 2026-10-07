@@ -6,7 +6,7 @@
 <meta name="description" content="Sokra is free. Pro documents are $29, one time, if you want the letters written for you.">
 <link rel="icon" href="./icon-192.png">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;1,9..144,300&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="./sokra.css">
+<link rel="stylesheet" href="./sokra.css?v=10">
 <style>
 .tiers{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:24px}
 @media(max-width:560px){.tiers{grid-template-columns:1fr}}
@@ -72,7 +72,7 @@
 
   <footer><span>Sokra is made by <b>LLCreativity LLC</b>, Odessa, Florida · <a href="mailto:sokra@llcreativityllc.com">sokra@llcreativityllc.com</a> · <a href="https://github.com/WealthRxAi/sokra" rel="noopener">read the source</a></span><span><a href="./pricing.html">Pricing</a> · <a href="./privacy.html">Privacy</a> · <a href="./terms.html">Terms</a></span></footer>
 </div>
-<script src="./sokra.js"></script>
+<script src="./sokra.js?v=10"></script>
 <script>SOKRA.hit("pricing");</script>
 <script>
 fetch(SOKRA.API + "/pricing").then(r => r.json()).then(p => { if (p.pro_price_cents) document.getElementById("price").innerHTML = "$" + (p.pro_price_cents/100).toFixed(0) + " <small>one time · this bill</small>"; }).catch(()=>{});
