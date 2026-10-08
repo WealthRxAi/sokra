@@ -37,7 +37,13 @@
 
   var src = small ? film.getAttribute("data-mobile") : film.getAttribute("data-desktop");
   if (!src) return;
+  // The markup carries preload="none" so a visitor without JS downloads
+  // nothing. Now that we are driving the playhead, ask for the media: with
+  // preload="none" an assignment to src alone fetches nothing, so load() is
+  // what actually starts it and lets loadedmetadata fire.
+  film.preload = "auto";
   film.src = src;
+  film.load();
 
   // A Blob source makes seeking instant. It needs CORS, which the media host
   // may not send, so it is an upgrade attempt and never a requirement.
@@ -50,6 +56,7 @@
         objectUrl = URL.createObjectURL(b);
         var at = film.currentTime;
         film.src = objectUrl;
+        film.load();
         film.addEventListener("loadedmetadata", function once() {
           film.removeEventListener("loadedmetadata", once);
           try { film.currentTime = at; } catch (e) { /* seek lands next frame */ }
@@ -65,7 +72,6 @@
 
   film.addEventListener("loadedmetadata", function () {
     duration = film.duration && isFinite(film.duration) ? film.duration : 15;
-    if (!raf) raf = window.requestAnimationFrame(tick);
   });
   film.addEventListener("seeked", function () { seeking = false; });
   film.addEventListener("error", function () {
@@ -92,7 +98,10 @@
 
   function tick() {
     raf = window.requestAnimationFrame(tick);
-    if (!duration) return;
+    if (!duration) {
+      if (film.duration && isFinite(film.duration)) duration = film.duration;
+      return;
+    }
     var target = ratio() * (duration - 0.05);
     current += (target - current) * 0.17;
     if (Math.abs(target - current) < 0.004) current = target;
@@ -101,6 +110,8 @@
       try { film.currentTime = current; } catch (e) { seeking = false; }
     }
   }
+
+  raf = window.requestAnimationFrame(tick);
 
   window.addEventListener("pagehide", function () {
     if (raf) window.cancelAnimationFrame(raf);
