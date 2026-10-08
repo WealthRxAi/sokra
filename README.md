@@ -2,8 +2,8 @@
 
 Upload any bill. Sokra reads it, finds the errors and the programs you're owed, ranks every way to reduce it by dollar impact, and hands you the exact words to say — then teaches you why it worked.
 
-**Live:** https://wealthrxai.github.io/sokra/
-**Admin:** https://wealthrxai.github.io/sokra/admin.html
+**Live:** https://getsokra.com/
+**Admin:** https://getsokra.com/admin.html
 
 Free for the person with the bill. Education and advocacy scripting, not legal or licensed financial advice.
 

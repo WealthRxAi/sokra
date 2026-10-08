@@ -1,6 +1,6 @@
 // Sokra service worker — cache the shell, network-first for everything else.
-const V = "sokra-v10";
-const SHELL = ["./", "./index.html", "./plan.html", "./sokra.css?v=10", "./sokra.js?v=10", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png", "./pricing.html", "./sample.html", "./sample-plan.json"];
+const V = "sokra-v11";
+const SHELL = ["./", "./index.html", "./plan.html", "./sokra.css?v=11", "./sokra.js?v=11", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png", "./pricing.html", "./sample.html", "./sample-plan.json"];
 self.addEventListener("install", (e) => { e.waitUntil(caches.open(V).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting())); });
 self.addEventListener("activate", (e) => { e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== V).map((k) => caches.delete(k)))).then(() => self.clients.claim())); });
 self.addEventListener("fetch", (e) => {

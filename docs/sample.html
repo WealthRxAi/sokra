@@ -6,7 +6,14 @@
 <meta name="description" content="What Sokra gives you back for a $47,000 hospital bill. Real format, example numbers.">
 <link rel="icon" href="./icon-192.png">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;0,9..144,600;1,9..144,300&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="./sokra.css?v=10">
+<link rel="canonical" href="https://getsokra.com/sample.html">
+<meta property="og:url" content="https://getsokra.com/sample.html">
+<meta property="og:title" content="A real Sokra plan — Sokra">
+<meta property="og:description" content="See a finished plan before you upload anything. Real format, made-up names.">
+<meta property="og:image" content="https://getsokra.com/og.png">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="./sokra.css?v=11">
 </head>
 <body>
 <div class="wrap">
@@ -16,7 +23,7 @@
   <footer><span>Sokra is made by <b>LLCreativity LLC</b>, Odessa, Florida · <a href="mailto:sokra@llcreativityllc.com">sokra@llcreativityllc.com</a> · <a href="https://github.com/WealthRxAi/sokra" rel="noopener">read the source</a></span><span><a href="./pricing.html">Pricing</a> · <a href="./privacy.html">Privacy</a> · <a href="./terms.html">Terms</a></span></footer>
 </div>
 <div class="toast" id="toast"></div>
-<script src="./sokra.js?v=10"></script>
+<script src="./sokra.js?v=11"></script>
 <script>SOKRA.hit("sample");</script>
 <script>
 fetch("./sample-plan.json").then(r => r.json()).then(a => { SOKRA.renderPlan(document.getElementById("results"), a, null, { tier: "free", pricing: { enabled: false } }); });
