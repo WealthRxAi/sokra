@@ -1,0 +1,166 @@
+/* Sokra marketing front door. Standalone token layer, scoped under .st so it
+ * never touches the app's own sokra.css. Palette and type are the product's. */
+
+.st {
+  --bg: #07080c;
+  --panel: #10131c;
+  --line: #3a4257;
+  --line2: #5a6480;
+  --ink: #ece8e0;
+  --ink2: #a9a59c;
+  --ink3: #9a97a2;
+  --gold: #d9b45a;
+  --teal: #4fc3b5;
+  --serif: 'Fraunces', Georgia, serif;
+  --sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --mono: 'JetBrains Mono', ui-monospace, monospace;
+  --gut: 22px;
+  --max: 1120px;
+  background: var(--bg);
+  color: var(--ink);
+  font: 16px/1.55 var(--sans);
+  -webkit-font-smoothing: antialiased;
+}
+@media (min-width: 900px) { .st { --gut: 64px } }
+.st *, .st *::before, .st *::after { box-sizing: border-box }
+.st ::selection { background: rgba(217,180,90,.28) }
+.shell { max-width: var(--max); margin: 0 auto; padding: 0 var(--gut) }
+.sec { padding: 92px 0; position: relative }
+@media (min-width: 900px) { .sec { padding: 140px 0 } }
+.eyebrow { font: 500 11px var(--mono); letter-spacing: .18em; text-transform: uppercase; color: var(--gold); margin-bottom: 16px }
+.h2 { font: 300 clamp(28px,4.6vw,50px)/1.05 var(--serif); letter-spacing: -.02em; margin: 0; max-width: 20ch }
+.h2 em { font-style: italic; color: var(--gold) }
+.lede { color: var(--ink2); font-size: 17px; line-height: 1.62; margin-top: 20px; max-width: 56ch }
+
+/* nav */
+.nav { position: fixed; inset: 0 0 auto; z-index: 40; background: rgba(7,8,12,.72); backdrop-filter: blur(14px); border-bottom: 1px solid var(--line) }
+.nav-in { display: flex; align-items: center; justify-content: space-between; height: 64px; max-width: var(--max); margin: 0 auto; padding: 0 var(--gut) }
+.mark { font: 600 22px var(--serif); letter-spacing: -.01em; color: var(--ink); text-decoration: none }
+.mark i { font-style: normal; color: var(--gold) }
+.nav-links { display: flex; align-items: center; gap: 26px }
+.nav-link { position: relative; font-size: 14px; color: var(--ink2); text-decoration: none; padding: 20px 0 }
+.nav-link::after { content: ""; position: absolute; left: 0; bottom: 16px; width: 100%; height: 1px; background: var(--gold); transform: scaleX(0); transform-origin: left }
+.nav-link:hover, .nav-link:focus-visible { color: var(--ink) }
+.nav-link:hover::after, .nav-link:focus-visible::after { transform: scaleX(1) }
+.nav-hide { display: none }
+@media (min-width: 680px) { .nav-hide { display: inline } }
+.bar { position: absolute; left: 0; bottom: -1px; height: 1px; background: var(--gold); width: 100%; transform: scaleX(0); transform-origin: left }
+
+/* the scroll band: a tall section with a sticky stage the film plays in */
+.band { position: relative; height: 320vh }
+@media (max-width: 860px) { .band { height: 260vh } }
+.stage { position: sticky; top: 0; height: 100dvh; overflow: hidden }
+.stage video, .stage img.plate { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center }
+.stage::after { content: ""; position: absolute; inset: 0; background: linear-gradient(100deg, rgba(7,8,12,.95) 0%, rgba(7,8,12,.74) 44%, rgba(7,8,12,.22) 100%) }
+.chapter { position: absolute; z-index: 2; left: 0; right: 0; bottom: 0; top: 0; display: flex; align-items: center }
+.chapter .shell { width: 100% }
+.kicker { font: 500 11px var(--mono); letter-spacing: .2em; text-transform: uppercase; color: var(--gold) }
+.h1 { font: 300 clamp(32px,6.4vw,62px)/1.04 var(--serif); letter-spacing: -.025em; margin: 16px 0 0; max-width: 15ch }
+.sub { color: var(--ink2); font-size: 17px; line-height: 1.6; margin-top: 18px; max-width: 46ch }
+.types { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 20px; font: 400 11px var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--ink3) }
+.acts { display: flex; flex-wrap: wrap; align-items: center; gap: 18px 36px; margin-top: 34px }
+
+/* CTA garment 1: torn seam underline. Used once page wide. */
+.seam { position: relative; display: inline-block; font: 500 clamp(24px,3.4vw,32px)/1.1 var(--serif); letter-spacing: -.02em; color: var(--ink); text-decoration: none; padding-bottom: 12px }
+.seam::after { content: ""; position: absolute; left: 0; bottom: 0; width: 100%; height: 7px; background: url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='26' height='7'%3E%3Cpath d='M0 3.2 L4 1.1 L8 4.2 L13 1.6 L17 4.6 L21 2.1 L26 3.6 L26 7 L0 7 Z' fill='%23D9B45A'/%3E%3C/svg%3E") repeat-x 0 0 / 26px 7px; transform: scaleX(.16); transform-origin: left }
+.seam:hover::after, .seam:focus-visible::after { transform: scaleX(1) }
+.seam:active { transform: translateY(1px) }
+
+/* CTA garment 2: a mono readout that tightens, with a holding caret */
+.readout { display: inline-flex; align-items: center; gap: 8px; font: 400 12px var(--mono); letter-spacing: .32em; text-transform: uppercase; color: var(--ink3); text-decoration: none; padding: 6px 2px }
+.readout b { width: 7px; height: 13px; background: var(--gold); display: inline-block }
+.readout:hover, .readout:focus-visible { color: var(--gold); letter-spacing: .13em }
+
+/* CTA garment 3: viewfinder brackets closing on the label */
+.view { position: relative; display: inline-block; font: 500 17px var(--sans); color: var(--ink); text-decoration: none; padding: 20px 40px }
+.view i { position: absolute; width: 15px; height: 15px; border: 1.5px solid var(--gold) }
+.view i:nth-child(1) { top: 0; left: 0; border-right: 0; border-bottom: 0 }
+.view i:nth-child(2) { top: 0; right: 0; border-left: 0; border-bottom: 0 }
+.view i:nth-child(3) { bottom: 0; left: 0; border-right: 0; border-top: 0 }
+.view i:nth-child(4) { bottom: 0; right: 0; border-left: 0; border-top: 0 }
+.view:hover i:nth-child(1), .view:focus-visible i:nth-child(1) { transform: translate(7px,7px) }
+.view:hover i:nth-child(2), .view:focus-visible i:nth-child(2) { transform: translate(-7px,7px) }
+.view:hover i:nth-child(3), .view:focus-visible i:nth-child(3) { transform: translate(7px,-7px) }
+.view:hover i:nth-child(4), .view:focus-visible i:nth-child(4) { transform: translate(-7px,-7px) }
+.st a:focus-visible { outline: 3px solid var(--gold); outline-offset: 4px; border-radius: 4px }
+
+/* settled chapters over the film's exact final frame */
+.settled { position: relative }
+.settled-bg { position: sticky; top: 0; height: 100dvh; overflow: hidden }
+.settled-bg img { width: 100%; height: 100%; object-fit: cover }
+.settled-bg::after { content: ""; position: absolute; inset: 0; background: linear-gradient(100deg, rgba(7,8,12,.95) 0%, rgba(7,8,12,.76) 48%, rgba(7,8,12,.3) 100%) }
+.settled-copy { margin-top: -100dvh; position: relative; z-index: 1 }
+.chap { min-height: 92dvh; display: flex; align-items: center }
+.chap > div { max-width: 34ch }
+.chap p { color: var(--ink2); font-size: 17px; margin-top: 18px }
+
+/* six steps */
+.steps { display: grid; border-top: 1px solid var(--line); margin-top: 48px }
+@media (min-width: 860px) { .steps { grid-template-columns: 1fr 1fr } }
+.step { border-bottom: 1px solid var(--line); padding: 32px 0 }
+@media (min-width: 860px) {
+  .step:nth-child(odd) { border-right: 1px solid var(--line); padding-right: 44px }
+  .step:nth-child(even) { padding-left: 44px }
+}
+.step img { display: block; width: 38px; height: 38px; margin-bottom: 16px }
+.step h3 { font: 500 21px var(--serif); margin: 0 }
+.step p { color: var(--ink3); font-size: 15px; margin: 8px 0 0; max-width: 44ch }
+
+/* the order matters */
+.order { display: grid; gap: 40px; align-items: center }
+@media (min-width: 980px) { .order { grid-template-columns: 1.05fr .95fr; gap: 70px } }
+.order figure { margin: 0; border: 1px solid var(--line); border-radius: 16px; overflow: hidden }
+.order figure img { display: block; width: 100%; height: 100%; object-fit: cover }
+
+/* two facts */
+.facts { position: relative; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line) }
+.facts-bg { position: absolute; inset: 0; overflow: hidden }
+.facts-bg img { width: 100%; height: 100%; object-fit: cover; opacity: .3 }
+.facts-bg::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(7,8,12,.84), rgba(7,8,12,.95)) }
+.facts-grid { position: relative; display: grid; gap: 44px }
+@media (min-width: 880px) { .facts-grid { grid-template-columns: .72fr 1.28fr; gap: 68px } }
+.fig { display: block; font: 300 clamp(42px,7vw,72px)/1 var(--serif); letter-spacing: -.03em; color: var(--gold) }
+.fact p { color: var(--ink2); font-size: 16px; margin-top: 14px; max-width: 46ch }
+.src { display: block; font: 400 11px var(--mono); letter-spacing: .1em; color: var(--ink3); margin-top: 12px }
+
+/* comparison */
+.table { width: 100%; border-collapse: collapse; margin-top: 44px }
+.table th, .table td { border-bottom: 1px solid var(--line); padding: 18px 16px 18px 0; text-align: left; vertical-align: top }
+.table thead th { border-bottom-color: var(--line2); font: 500 11px var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--ink3) }
+.table thead th:last-child { color: var(--gold) }
+.table tbody th { width: 26%; font-weight: 400; font-size: 14px; color: var(--ink3) }
+.table td { font-size: 15px; color: var(--ink2) }
+.table td:last-child { color: var(--ink) }
+@media (max-width: 720px) {
+  .table thead { display: none }
+  .table tr { display: block; border-bottom: 1px solid var(--line); padding: 16px 0 }
+  .table th, .table td { display: block; border: 0; padding: 2px 0; width: auto }
+  .table td::before { content: attr(data-side) " "; font: 400 10px var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--ink3) }
+}
+
+/* trust */
+.trust { margin-top: 44px }
+.trow { border-top: 1px solid var(--line); padding: 28px 0; display: grid; gap: 10px }
+@media (min-width: 880px) { .trow { grid-template-columns: .46fr 1.54fr; gap: 50px } }
+.trow h3 { font: 500 20px var(--serif); margin: 0 }
+.trow p { color: var(--ink2); font-size: 15.5px; margin: 0; max-width: 62ch }
+.trow a { color: var(--teal); text-decoration: none }
+.trow a:hover { text-decoration: underline }
+
+/* closing and footer */
+.close { border-top: 1px solid var(--line); padding: 112px 0 104px; text-align: center }
+.close h2 { font: 300 clamp(30px,5.6vw,58px)/1.05 var(--serif); letter-spacing: -.025em; margin: 0 auto; max-width: 22ch }
+.close-act { margin-top: 38px }
+.fine { font: 400 11px var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--ink3); margin-top: 26px }
+.foot { border-top: 1px solid var(--line); display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px 26px; font-size: 13px; color: var(--ink3); padding: 30px 0 52px }
+.foot a { color: var(--ink3); text-decoration: none }
+.foot a:hover { color: var(--ink) }
+
+@media (prefers-reduced-motion: no-preference) {
+  .nav-link::after, .seam::after, .readout, .view i, .bar {
+    transition: transform .42s cubic-bezier(.2,.7,.2,1), letter-spacing .3s ease, color .3s ease;
+  }
+  html { scroll-behavior: smooth }
+}
+
+.sr { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0 }
