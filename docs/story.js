@@ -37,6 +37,17 @@
 
   var src = small ? film.getAttribute("data-mobile") : film.getAttribute("data-desktop");
   if (!src) return;
+
+  // This is the homepage now, and someone holding a bill should not wait behind
+  // 11MB of film for the upload card to become usable. The poster is already the
+  // exact first frame, so hold the fetch until the page has finished loading and
+  // had a moment of quiet. Nothing on screen changes when it arrives.
+  if (document.readyState !== "complete") {
+    window.addEventListener("load", function () { setTimeout(begin, 700); }, { once: true });
+    return;
+  }
+  setTimeout(begin, 200);
+  function begin() {
   // The markup carries preload="none" so a visitor without JS downloads
   // nothing. Now that we are driving the playhead, ask for the media: with
   // preload="none" an assignment to src alone fetches nothing, so load() is
@@ -111,7 +122,8 @@
     }
   }
 
-  raf = window.requestAnimationFrame(tick);
+    raf = window.requestAnimationFrame(tick);
+  }
 
   window.addEventListener("pagehide", function () {
     if (raf) window.cancelAnimationFrame(raf);

@@ -1,7 +1,7 @@
-/* Sokra marketing front door. Standalone token layer, scoped under .st so it
+/* Sokra marketing front door. Standalone token layer, scoped under .sf so it
  * never touches the app's own sokra.css. Palette and type are the product's. */
 
-.st {
+.sf {
   --bg: #07080c;
   --panel: #10131c;
   --line: #3a4257;
@@ -21,146 +21,166 @@
   font: 16px/1.55 var(--sans);
   -webkit-font-smoothing: antialiased;
 }
-@media (min-width: 900px) { .st { --gut: 64px } }
-.st *, .st *::before, .st *::after { box-sizing: border-box }
-.st ::selection { background: rgba(217,180,90,.28) }
-.shell { max-width: var(--max); margin: 0 auto; padding: 0 var(--gut) }
-.sec { padding: 92px 0; position: relative }
-@media (min-width: 900px) { .sec { padding: 140px 0 } }
-.eyebrow { font: 500 11px var(--mono); letter-spacing: .18em; text-transform: uppercase; color: var(--gold); margin-bottom: 16px }
-.h2 { font: 300 clamp(28px,4.6vw,50px)/1.05 var(--serif); letter-spacing: -.02em; margin: 0; max-width: 20ch }
-.h2 em { font-style: italic; color: var(--gold) }
-.lede { color: var(--ink2); font-size: 17px; line-height: 1.62; margin-top: 20px; max-width: 56ch }
+@media (min-width: 900px) { .sf { --gut: 64px } }
+.sf *, .sf *::before, .sf *::after { box-sizing: border-box }
+.sf ::selection { background: rgba(217,180,90,.28) }
+.sf-shell { max-width: var(--max); margin: 0 auto; padding: 0 var(--gut) }
+.sf-sec { padding: 92px 0; position: relative }
+@media (min-width: 900px) { .sf-sec { padding: 140px 0 } }
+.sf-eyebrow { font: 500 11px var(--mono); letter-spacing: .18em; text-transform: uppercase; color: var(--gold); margin-bottom: 16px }
+.sf-h2 { font: 300 clamp(28px,4.6vw,50px)/1.05 var(--serif); letter-spacing: -.02em; margin: 0; max-width: 20ch }
+.sf-h2 em { font-style: italic; color: var(--gold) }
+.sf-lede { color: var(--ink2); font-size: 17px; line-height: 1.62; margin-top: 20px; max-width: 56ch }
 
 /* nav */
-.nav { position: fixed; inset: 0 0 auto; z-index: 40; background: rgba(7,8,12,.72); backdrop-filter: blur(14px); border-bottom: 1px solid var(--line) }
-.nav-in { display: flex; align-items: center; justify-content: space-between; height: 64px; max-width: var(--max); margin: 0 auto; padding: 0 var(--gut) }
-.mark { font: 600 22px var(--serif); letter-spacing: -.01em; color: var(--ink); text-decoration: none }
-.mark i { font-style: normal; color: var(--gold) }
-.nav-links { display: flex; align-items: center; gap: 26px }
-.nav-link { position: relative; font-size: 14px; color: var(--ink2); text-decoration: none; padding: 20px 0 }
-.nav-link::after { content: ""; position: absolute; left: 0; bottom: 16px; width: 100%; height: 1px; background: var(--gold); transform: scaleX(0); transform-origin: left }
-.nav-link:hover, .nav-link:focus-visible { color: var(--ink) }
-.nav-link:hover::after, .nav-link:focus-visible::after { transform: scaleX(1) }
-.nav-hide { display: none }
-@media (min-width: 680px) { .nav-hide { display: inline } }
-.bar { position: absolute; left: 0; bottom: -1px; height: 1px; background: var(--gold); width: 100%; transform: scaleX(0); transform-origin: left }
+.sf-nav { position: fixed; inset: 0 0 auto; z-index: 40; background: rgba(7,8,12,.72); backdrop-filter: blur(14px); border-bottom: 1px solid var(--line) }
+.sf-nav-in { display: flex; align-items: center; justify-content: space-between; height: 64px; max-width: var(--max); margin: 0 auto; padding: 0 var(--gut) }
+.sf-mark { font: 600 22px var(--serif); letter-spacing: -.01em; color: var(--ink); text-decoration: none }
+.sf-mark i { font-style: normal; color: var(--gold) }
+.sf-nav-links { display: flex; align-items: center; gap: 26px }
+.sf-nav-link { position: relative; font-size: 14px; color: var(--ink2); text-decoration: none; padding: 20px 0 }
+.sf-nav-link::after { content: ""; position: absolute; left: 0; bottom: 16px; width: 100%; height: 1px; background: var(--gold); transform: scaleX(0); transform-origin: left }
+.sf-nav-link:hover, .sf-nav-link:focus-visible { color: var(--ink) }
+.sf-nav-link:hover::after, .sf-nav-link:focus-visible::after { transform: scaleX(1) }
+.sf-nav-hide { display: none }
+@media (min-width: 680px) { .sf-nav-hide { display: inline } }
+.sf-bar { position: absolute; left: 0; bottom: -1px; height: 1px; background: var(--gold); width: 100%; transform: scaleX(0); transform-origin: left }
 
 /* the scroll band: a tall section with a sticky stage the film plays in */
-.band { position: relative; height: 320vh }
-@media (max-width: 860px) { .band { height: 260vh } }
-.stage { position: sticky; top: 0; height: 100dvh; overflow: hidden }
-.stage video, .stage img.plate { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center }
-.stage::after { content: ""; position: absolute; inset: 0; background: linear-gradient(100deg, rgba(7,8,12,.95) 0%, rgba(7,8,12,.74) 44%, rgba(7,8,12,.22) 100%) }
-.chapter { position: absolute; z-index: 2; left: 0; right: 0; bottom: 0; top: 0; display: flex; align-items: center }
-.chapter .shell { width: 100% }
-.kicker { font: 500 11px var(--mono); letter-spacing: .2em; text-transform: uppercase; color: var(--gold) }
-.h1 { font: 300 clamp(32px,6.4vw,62px)/1.04 var(--serif); letter-spacing: -.025em; margin: 16px 0 0; max-width: 15ch }
-.sub { color: var(--ink2); font-size: 17px; line-height: 1.6; margin-top: 18px; max-width: 46ch }
-.types { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 20px; font: 400 11px var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--ink3) }
-.acts { display: flex; flex-wrap: wrap; align-items: center; gap: 18px 36px; margin-top: 34px }
+.sf-band { position: relative; height: 320vh }
+@media (max-width: 860px) { .sf-band { height: 260vh } }
+.sf-stage { position: sticky; top: 0; height: 100dvh; overflow: hidden }
+.sf-stage video, .sf-stage img.sf-plate { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center }
+.sf-stage::after { content: ""; position: absolute; inset: 0; background: linear-gradient(100deg, rgba(7,8,12,.95) 0%, rgba(7,8,12,.74) 44%, rgba(7,8,12,.22) 100%) }
+.sf-chapter { position: absolute; z-index: 2; left: 0; right: 0; bottom: 0; top: 0; display: flex; align-items: center }
+.sf-chapter .sf-shell { width: 100% }
+.sf-kicker { font: 500 11px var(--mono); letter-spacing: .2em; text-transform: uppercase; color: var(--gold) }
+.sf-h1 { font: 300 clamp(32px,6.4vw,62px)/1.04 var(--serif); letter-spacing: -.025em; margin: 16px 0 0; max-width: 15ch }
+.sf-sub { color: var(--ink2); font-size: 17px; line-height: 1.6; margin-top: 18px; max-width: 46ch }
+.sf-types { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 20px; font: 400 11px var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--ink3) }
+.sf-acts { display: flex; flex-wrap: wrap; align-items: center; gap: 18px 36px; margin-top: 34px }
 
 /* CTA garment 1: torn seam underline. Used once page wide. */
-.seam { position: relative; display: inline-block; font: 500 clamp(24px,3.4vw,32px)/1.1 var(--serif); letter-spacing: -.02em; color: var(--ink); text-decoration: none; padding-bottom: 12px }
-.seam::after { content: ""; position: absolute; left: 0; bottom: 0; width: 100%; height: 7px; background: url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='26' height='7'%3E%3Cpath d='M0 3.2 L4 1.1 L8 4.2 L13 1.6 L17 4.6 L21 2.1 L26 3.6 L26 7 L0 7 Z' fill='%23D9B45A'/%3E%3C/svg%3E") repeat-x 0 0 / 26px 7px; transform: scaleX(.16); transform-origin: left }
-.seam:hover::after, .seam:focus-visible::after { transform: scaleX(1) }
-.seam:active { transform: translateY(1px) }
+.sf-seam { position: relative; display: inline-block; font: 500 clamp(24px,3.4vw,32px)/1.1 var(--serif); letter-spacing: -.02em; color: var(--ink); text-decoration: none; padding-bottom: 12px }
+.sf-seam::after { content: ""; position: absolute; left: 0; bottom: 0; width: 100%; height: 7px; background: url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='26' height='7'%3E%3Cpath d='M0 3.2 L4 1.1 L8 4.2 L13 1.6 L17 4.6 L21 2.1 L26 3.6 L26 7 L0 7 Z' fill='%23D9B45A'/%3E%3C/svg%3E") repeat-x 0 0 / 26px 7px; transform: scaleX(.16); transform-origin: left }
+.sf-seam:hover::after, .sf-seam:focus-visible::after { transform: scaleX(1) }
+.sf-seam:active { transform: translateY(1px) }
 
 /* CTA garment 2: a mono readout that tightens, with a holding caret */
-.readout { display: inline-flex; align-items: center; gap: 8px; font: 400 12px var(--mono); letter-spacing: .32em; text-transform: uppercase; color: var(--ink3); text-decoration: none; padding: 6px 2px }
-.readout b { width: 7px; height: 13px; background: var(--gold); display: inline-block }
-.readout:hover, .readout:focus-visible { color: var(--gold); letter-spacing: .13em }
+.sf-readout { display: inline-flex; align-items: center; gap: 8px; font: 400 12px var(--mono); letter-spacing: .32em; text-transform: uppercase; color: var(--ink3); text-decoration: none; padding: 6px 2px }
+.sf-readout b { width: 7px; height: 13px; background: var(--gold); display: inline-block }
+.sf-readout:hover, .sf-readout:focus-visible { color: var(--gold); letter-spacing: .13em }
 
 /* CTA garment 3: viewfinder brackets closing on the label */
-.view { position: relative; display: inline-block; font: 500 17px var(--sans); color: var(--ink); text-decoration: none; padding: 20px 40px }
-.view i { position: absolute; width: 15px; height: 15px; border: 1.5px solid var(--gold) }
-.view i:nth-child(1) { top: 0; left: 0; border-right: 0; border-bottom: 0 }
-.view i:nth-child(2) { top: 0; right: 0; border-left: 0; border-bottom: 0 }
-.view i:nth-child(3) { bottom: 0; left: 0; border-right: 0; border-top: 0 }
-.view i:nth-child(4) { bottom: 0; right: 0; border-left: 0; border-top: 0 }
-.view:hover i:nth-child(1), .view:focus-visible i:nth-child(1) { transform: translate(7px,7px) }
-.view:hover i:nth-child(2), .view:focus-visible i:nth-child(2) { transform: translate(-7px,7px) }
-.view:hover i:nth-child(3), .view:focus-visible i:nth-child(3) { transform: translate(7px,-7px) }
-.view:hover i:nth-child(4), .view:focus-visible i:nth-child(4) { transform: translate(-7px,-7px) }
-.st a:focus-visible { outline: 3px solid var(--gold); outline-offset: 4px; border-radius: 4px }
+.sf-view { position: relative; display: inline-block; font: 500 17px var(--sans); color: var(--ink); text-decoration: none; padding: 20px 40px }
+.sf-view i { position: absolute; width: 15px; height: 15px; border: 1.5px solid var(--gold) }
+.sf-view i:nth-child(1) { top: 0; left: 0; border-right: 0; border-bottom: 0 }
+.sf-view i:nth-child(2) { top: 0; right: 0; border-left: 0; border-bottom: 0 }
+.sf-view i:nth-child(3) { bottom: 0; left: 0; border-right: 0; border-top: 0 }
+.sf-view i:nth-child(4) { bottom: 0; right: 0; border-left: 0; border-top: 0 }
+.sf-view:hover i:nth-child(1), .sf-view:focus-visible i:nth-child(1) { transform: translate(7px,7px) }
+.sf-view:hover i:nth-child(2), .sf-view:focus-visible i:nth-child(2) { transform: translate(-7px,7px) }
+.sf-view:hover i:nth-child(3), .sf-view:focus-visible i:nth-child(3) { transform: translate(7px,-7px) }
+.sf-view:hover i:nth-child(4), .sf-view:focus-visible i:nth-child(4) { transform: translate(-7px,-7px) }
+.sf a:focus-visible { outline: 3px solid var(--gold); outline-offset: 4px; border-radius: 4px }
 
 /* settled chapters over the film's exact final frame */
-.settled { position: relative }
-.settled-bg { position: sticky; top: 0; height: 100dvh; overflow: hidden }
-.settled-bg img { width: 100%; height: 100%; object-fit: cover }
-.settled-bg::after { content: ""; position: absolute; inset: 0; background: linear-gradient(100deg, rgba(7,8,12,.95) 0%, rgba(7,8,12,.76) 48%, rgba(7,8,12,.3) 100%) }
-.settled-copy { margin-top: -100dvh; position: relative; z-index: 1 }
-.chap { min-height: 92dvh; display: flex; align-items: center }
-.chap > div { max-width: 34ch }
-.chap p { color: var(--ink2); font-size: 17px; margin-top: 18px }
+.sf-settled { position: relative }
+.sf-settled-bg { position: sticky; top: 0; height: 100dvh; overflow: hidden }
+.sf-settled-bg img { width: 100%; height: 100%; object-fit: cover }
+.sf-settled-bg::after { content: ""; position: absolute; inset: 0; background: linear-gradient(100deg, rgba(7,8,12,.95) 0%, rgba(7,8,12,.76) 48%, rgba(7,8,12,.3) 100%) }
+.sf-settled-copy { margin-top: -100dvh; position: relative; z-index: 1 }
+.sf-chap { min-height: 92dvh; display: flex; align-items: center }
+.sf-chap > div { max-width: 34ch }
+.sf-chap p { color: var(--ink2); font-size: 17px; margin-top: 18px }
 
 /* six steps */
-.steps { display: grid; border-top: 1px solid var(--line); margin-top: 48px }
-@media (min-width: 860px) { .steps { grid-template-columns: 1fr 1fr } }
-.step { border-bottom: 1px solid var(--line); padding: 32px 0 }
+.sf-steps { display: grid; border-top: 1px solid var(--line); margin-top: 48px }
+@media (min-width: 860px) { .sf-steps { grid-template-columns: 1fr 1fr } }
+.sf-step { border-bottom: 1px solid var(--line); padding: 32px 0 }
 @media (min-width: 860px) {
-  .step:nth-child(odd) { border-right: 1px solid var(--line); padding-right: 44px }
-  .step:nth-child(even) { padding-left: 44px }
+  .sf-step:nth-child(odd) { border-right: 1px solid var(--line); padding-right: 44px }
+  .sf-step:nth-child(even) { padding-left: 44px }
 }
-.step img { display: block; width: 38px; height: 38px; margin-bottom: 16px }
-.step h3 { font: 500 21px var(--serif); margin: 0 }
-.step p { color: var(--ink3); font-size: 15px; margin: 8px 0 0; max-width: 44ch }
+.sf-step img { display: block; width: 38px; height: 38px; margin-bottom: 16px }
+.sf-step h3 { font: 500 21px var(--serif); margin: 0 }
+.sf-step p { color: var(--ink3); font-size: 15px; margin: 8px 0 0; max-width: 44ch }
 
 /* the order matters */
-.order { display: grid; gap: 40px; align-items: center }
-@media (min-width: 980px) { .order { grid-template-columns: 1.05fr .95fr; gap: 70px } }
-.order figure { margin: 0; border: 1px solid var(--line); border-radius: 16px; overflow: hidden }
-.order figure img { display: block; width: 100%; height: 100%; object-fit: cover }
+.sf-order { display: grid; gap: 40px; align-items: center }
+@media (min-width: 980px) { .sf-order { grid-template-columns: 1.05fr .95fr; gap: 70px } }
+.sf-order figure { margin: 0; border: 1px solid var(--line); border-radius: 16px; overflow: hidden }
+.sf-order figure img { display: block; width: 100%; height: 100%; object-fit: cover }
 
 /* two facts */
-.facts { position: relative; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line) }
-.facts-bg { position: absolute; inset: 0; overflow: hidden }
-.facts-bg img { width: 100%; height: 100%; object-fit: cover; opacity: .3 }
-.facts-bg::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(7,8,12,.84), rgba(7,8,12,.95)) }
-.facts-grid { position: relative; display: grid; gap: 44px }
-@media (min-width: 880px) { .facts-grid { grid-template-columns: .72fr 1.28fr; gap: 68px } }
-.fig { display: block; font: 300 clamp(42px,7vw,72px)/1 var(--serif); letter-spacing: -.03em; color: var(--gold) }
-.fact p { color: var(--ink2); font-size: 16px; margin-top: 14px; max-width: 46ch }
-.src { display: block; font: 400 11px var(--mono); letter-spacing: .1em; color: var(--ink3); margin-top: 12px }
+.sf-facts { position: relative; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line) }
+.sf-facts-bg { position: absolute; inset: 0; overflow: hidden }
+.sf-facts-bg img { width: 100%; height: 100%; object-fit: cover; opacity: .3 }
+.sf-facts-bg::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(7,8,12,.84), rgba(7,8,12,.95)) }
+.sf-facts-grid { position: relative; display: grid; gap: 44px }
+@media (min-width: 880px) { .sf-facts-grid { grid-template-columns: .72fr 1.28fr; gap: 68px } }
+.sf-fig { display: block; font: 300 clamp(42px,7vw,72px)/1 var(--serif); letter-spacing: -.03em; color: var(--gold) }
+.sf-fact p { color: var(--ink2); font-size: 16px; margin-top: 14px; max-width: 46ch }
+.sf-src { display: block; font: 400 11px var(--mono); letter-spacing: .1em; color: var(--ink3); margin-top: 12px }
 
 /* comparison */
-.table { width: 100%; border-collapse: collapse; margin-top: 44px }
-.table th, .table td { border-bottom: 1px solid var(--line); padding: 18px 16px 18px 0; text-align: left; vertical-align: top }
-.table thead th { border-bottom-color: var(--line2); font: 500 11px var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--ink3) }
-.table thead th:last-child { color: var(--gold) }
-.table tbody th { width: 26%; font-weight: 400; font-size: 14px; color: var(--ink3) }
-.table td { font-size: 15px; color: var(--ink2) }
-.table td:last-child { color: var(--ink) }
+.sf-table { width: 100%; border-collapse: collapse; margin-top: 44px }
+.sf-table th, .sf-table td { border-bottom: 1px solid var(--line); padding: 18px 16px 18px 0; text-align: left; vertical-align: top }
+.sf-table thead th { border-bottom-color: var(--line2); font: 500 11px var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--ink3) }
+.sf-table thead th:last-child { color: var(--gold) }
+.sf-table tbody th { width: 26%; font-weight: 400; font-size: 14px; color: var(--ink3) }
+.sf-table td { font-size: 15px; color: var(--ink2) }
+.sf-table td:last-child { color: var(--ink) }
 @media (max-width: 720px) {
-  .table thead { display: none }
-  .table tr { display: block; border-bottom: 1px solid var(--line); padding: 16px 0 }
-  .table th, .table td { display: block; border: 0; padding: 2px 0; width: auto }
-  .table td::before { content: attr(data-side) " "; font: 400 10px var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--ink3) }
+  .sf-table thead { display: none }
+  .sf-table tr { display: block; border-bottom: 1px solid var(--line); padding: 16px 0 }
+  .sf-table th, .sf-table td { display: block; border: 0; padding: 2px 0; width: auto }
+  .sf-table td::before { content: attr(data-side) " "; font: 400 10px var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--ink3) }
 }
 
 /* trust */
-.trust { margin-top: 44px }
-.trow { border-top: 1px solid var(--line); padding: 28px 0; display: grid; gap: 10px }
-@media (min-width: 880px) { .trow { grid-template-columns: .46fr 1.54fr; gap: 50px } }
-.trow h3 { font: 500 20px var(--serif); margin: 0 }
-.trow p { color: var(--ink2); font-size: 15.5px; margin: 0; max-width: 62ch }
-.trow a { color: var(--teal); text-decoration: none }
-.trow a:hover { text-decoration: underline }
+.sf-trust { margin-top: 44px }
+.sf-trow { border-top: 1px solid var(--line); padding: 28px 0; display: grid; gap: 10px }
+@media (min-width: 880px) { .sf-trow { grid-template-columns: .46fr 1.54fr; gap: 50px } }
+.sf-trow h3 { font: 500 20px var(--serif); margin: 0 }
+.sf-trow p { color: var(--ink2); font-size: 15.5px; margin: 0; max-width: 62ch }
+.sf-trow a { color: var(--teal); text-decoration: none }
+.sf-trow a:hover { text-decoration: underline }
 
 /* closing and footer */
-.close { border-top: 1px solid var(--line); padding: 112px 0 104px; text-align: center }
-.close h2 { font: 300 clamp(30px,5.6vw,58px)/1.05 var(--serif); letter-spacing: -.025em; margin: 0 auto; max-width: 22ch }
-.close-act { margin-top: 38px }
-.fine { font: 400 11px var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--ink3); margin-top: 26px }
-.foot { border-top: 1px solid var(--line); display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px 26px; font-size: 13px; color: var(--ink3); padding: 30px 0 52px }
-.foot a { color: var(--ink3); text-decoration: none }
-.foot a:hover { color: var(--ink) }
+.sf-close { border-top: 1px solid var(--line); padding: 112px 0 104px; text-align: center }
+.sf-close h2 { font: 300 clamp(30px,5.6vw,58px)/1.05 var(--serif); letter-spacing: -.025em; margin: 0 auto; max-width: 22ch }
+.sf-close-act { margin-top: 38px }
+.sf-fine { font: 400 11px var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--ink3); margin-top: 26px }
+.sf-foot { border-top: 1px solid var(--line); display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px 26px; font-size: 13px; color: var(--ink3); padding: 30px 0 52px }
+.sf-foot a { color: var(--ink3); text-decoration: none }
+.sf-foot a:hover { color: var(--ink) }
 
 @media (prefers-reduced-motion: no-preference) {
-  .nav-link::after, .seam::after, .readout, .view i, .bar {
+  .sf-nav-link::after, .sf-seam::after, .sf-readout, .sf-view i, .sf-bar {
     transition: transform .42s cubic-bezier(.2,.7,.2,1), letter-spacing .3s ease, color .3s ease;
   }
   html { scroll-behavior: smooth }
 }
 
-.sr { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0 }
+.sf-sr { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0 }
+
+/* ---- living on the same page as the app -------------------------------
+ * sokra.css styles bare header, footer, section, table, h1 and h2, and the
+ * homepage now loads both sheets. The film layer restates what it owns so the
+ * app's element rules cannot reach in. */
+
+.sf-nav { display: block; padding: 0 }
+section.sf-sec, section.sf-settled, section.sf-facts, section.sf-close, section.sf-band { margin-top: 0 }
+.sf-band, .sf-settled, .sf-sec, .sf-facts, .sf-close, .sf-foot { position: relative; z-index: 1 }
+.sf-foot { margin-top: 0; padding-top: 30px; font-family: var(--sans); font-size: 13px; letter-spacing: 0; text-transform: none }
+.sf-foot a { font-size: 13px; letter-spacing: 0; text-transform: none; text-decoration: none; padding: 0 }
+
+/* the upload section: the app's own card, dropped into the journey */
+#upload { scroll-margin-top: 78px }
+.sf-upload-lead { max-width: 30ch; margin: 0 auto 26px; text-align: center }
+.sf-upload-lead .sf-h2 { max-width: none }
+.sf-upload-lead p { color: var(--ink2); font-size: 16px; margin-top: 12px }
+
+/* the analysis and plan views sit under the fixed nav */
+.sf-pad { padding-top: 92px }

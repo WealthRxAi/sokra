@@ -4,123 +4,239 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#07080C">
-<title>Sokra — Reduce what you owe</title>
-<meta name="description" content="Upload any bill. Sokra finds the errors, the programs you're owed, and the exact words to say — then teaches you why it works. Free.">
+<title>Sokra &mdash; Reduce what you owe</title>
+<meta name="description" content="Upload a bill. Sokra finds the errors, the programs you are owed, and the exact words to say, then teaches you why it works. Free, no account, about two minutes.">
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="icon" href="./icon-192.png">
 <link rel="apple-touch-icon" href="./icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;0,9..144,600;1,9..144,300&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="canonical" href="https://getsokra.com/">
 <meta property="og:url" content="https://getsokra.com/">
-<meta property="og:title" content="Sokra — Reduce what you owe">
-<meta property="og:description" content="Upload any bill. Sokra finds the errors, the programs you're owed, and the exact words to say — then teaches you why it works. Free.">
-<meta property="og:image" content="https://getsokra.com/og.png">
+<meta property="og:title" content="Sokra &mdash; Upload a bill. Get the words that lower it.">
+<meta property="og:description" content="Photograph a bill. In about two minutes Sokra tells you what looks wrong on it, every way to bring it down, and the exact words to say. Free, no account.">
+<meta property="og:image" content="https://d2ol7oe51mr4n9.cloudfront.net/user_3F3ONjwr77mQGpK5oVuBXTCRowx/446425a1-7645-4d62-892f-ff14ff3dec55.png">
 <meta property="og:type" content="website">
 <meta name="twitter:card" content="summary_large_image">
-<link rel="stylesheet" href="./sokra.css?v=11">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://d2ol7oe51mr4n9.cloudfront.net" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;0,9..144,600;1,9..144,300&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./sokra.css?v=12">
+<link rel="stylesheet" href="./story.css?v=3">
 </head>
-<body>
-<div class="wrap">
-  <header><a class="logo" href="./">So<span>k</span>ra</a><nav class="nav"><a href="./sample.html">See a sample</a><a href="./pricing.html">Pricing</a></nav></header>
+<body class="sf" id="top">
 
-  <div id="intake">
-    <h1 class="h1-tight">Upload the bill.<br>Get the <em>exact words</em><br>that lower it.</h1>
-    <p class="lede lede-short">Medical, credit card, collections, utilities, phone. Free. No account.</p>
-    <p class="lede-cta"><a href="./sample.html">See a finished plan first →</a> <span>Real format, made-up names. Nothing to enter.</span></p>
-
-    <div class="card">
-      <div class="drop" id="drop">
-        <input type="file" id="files" accept="image/*,.heic,.heif,application/pdf" multiple>
-        <div class="big">Tap to photograph or upload</div>
-        <div class="small">Photo or PDF · up to 6 pages</div>
-        <div class="thumbs" id="thumbs"></div>
-      </div>
-      <div class="err" id="err" role="alert"></div>
-
-      <div id="ctx" class="ctx-open">
-        <div class="ctx-head">
-          <span class="ctx-title">A few quick questions</span>
-          <span class="ctx-why">They decide if you qualify for help</span>
-        </div>
-        <div class="grid">
-          <div><label for="income">Household income before tax, per year</label><input type="text" id="income" inputmode="numeric" placeholder="36,000" aria-describedby="income_help"><span class="ctx-why" id="income_help">Yearly, not monthly. A rough number is fine.</span></div>
-          <div><label for="household">People in household</label><input type="number" id="household" min="1" max="12" placeholder="2"></div>
-        </div>
-        <div style="margin-top:12px"><label for="goal">What matters most to you here?</label>
-          <select id="goal">
-            <option value="gone">I just want the balance gone</option>
-            <option value="credit">Protecting my credit — I'm applying for a loan or mortgage</option>
-            <option value="cant_pay">I can't cover rent, food or medicine right now</option>
-            <option value="sued">I'm being sued, garnished, or threatened with it</option>
-          </select>
-          <span class="ctx-why">This changes the advice. Paying a bill off can lower the balance and still hurt your credit.</span>
-        </div>
-        <label class="check" style="margin-top:14px"><input type="checkbox" id="consent_store"> <span>Keep a copy of my bill so I can come back to it. Leave this off and your photo is deleted after it's read — your plan still works.</span></label>
-        <details class="ctx more">
-          <summary>More details (optional)</summary>
-          <div class="grid">
-            <div><label for="state">State</label><input type="text" id="state" maxlength="2" placeholder="FL" style="text-transform:uppercase"></div>
-            <div><label for="insured">Do you have health insurance?</label><select id="insured"><option value="">Not sure / not relevant</option><option value="yes">Yes</option><option value="no">No</option></select></div>
-          </div>
-          <div style="margin-top:12px"><label for="notes">Anything else</label><textarea id="notes" placeholder="e.g. This was an ER visit. A collector already wrote to me. I lost my job in June."></textarea></div>
-          <div style="margin-top:12px" id="email_row" hidden><label for="email">Email — we'll send your plan and check in once in two weeks</label><input type="email" id="email" placeholder="you@example.com"></div>
-        </details>
-      </div>
-
-      <button class="btn" id="go" disabled>Analyze my bill — free</button>
-      <p class="fine">Takes one to two minutes — it reads every line and checks the law that applies. Nothing is sent to your biller. <a href="./privacy.html">Privacy</a></p>
-      <div class="install" id="install"><b>Keep Sokra on your phone.</b> <a href="#" id="install_btn">Add to home screen</a></div>
-    </div>
-
-    <!-- proof strip -->
-    <div class="proof">
-      <div class="proof-item"><div class="proof-n">$0</div><div class="proof-l">Sokra never takes a cut of what you save. Bill negotiators take 18–25%.</div></div>
-      <div class="proof-item"><div class="proof-n">240</div><div class="proof-l">days a nonprofit hospital must keep accepting your financial-assistance application — far longer than most people are told <a href="https://www.irs.gov/charities-non-profits/charitable-hospitals-general-requirements-for-tax-exemption-under-section-501r" rel="noopener">(IRS 501(r))</a></div></div>
-      <div class="proof-item"><div class="proof-n">1 in 2</div><div class="proof-l">US adults carry medical or other consumer debt they don't know how to challenge. Most never ask.</div></div>
-    </div>
-
-    <section>
-      <div class="sec">What you get back</div>
-      <div class="what">
-        <div class="what-item"><b>What looks wrong on the bill.</b> Charges that appear twice, quantities that don't match the visit, fees added after the date they were due, maths that doesn't add up.</div>
-        <div class="what-item"><b>Every way to lower it, biggest first.</b> Financial assistance you may qualify for. Hardship programs nobody mentions. Charges the law may not allow. Deadlines that haven't closed yet.</div>
-        <div class="what-item"><b>The order to do it in.</b> Some moves cancel out others — paying early can cost you a write-off. Sokra tells you what to do second, not just first.</div>
-        <div class="what-item"><b>The exact words.</b> A script to read on the phone tomorrow morning, with a copy button.</div>
-        <div class="what-item"><b>What to do first, and by when.</b> One action. Deadlines that matter.</div>
-        <div class="what-item"><b>Why it works.</b> So the next bill, you don't need us.</div>
-      </div>
-      <a class="btn ghost" href="./sample.html" style="margin-top:16px">See a real sample plan →</a>
-    </section>
-
-    <section>
-      <div class="sec">How it compares</div>
-      <table class="cmp">
-        <tr><th></th><th>Bill negotiators</th><th>Sokra</th></tr>
-        <tr><td>What they charge</td><td>18–25% of what they save you</td><td class="hi">Free. Pro docs $29 flat, if you want them.</td></tr>
-        <tr><td>Who makes the call</td><td>They do</td><td class="hi">You do — with the words in hand</td></tr>
-        <tr><td>Next bill</td><td>Pay them again</td><td class="hi">You already know how</td></tr>
-        <tr><td>Bills under $1,000</td><td>Usually won't take them</td><td class="hi">Same help, same price: free</td></tr>
-      </table>
-    </section>
+<header class="sf-nav">
+  <div class="sf-nav-in">
+    <a class="sf-mark" href="#top">So<i>k</i>ra</a>
+    <nav class="sf-nav-links">
+      <a class="sf-nav-link sf-nav-hide" href="#what-it-does">What it does</a>
+      <a class="sf-nav-link sf-nav-hide" href="#compare">Compared</a>
+      <a class="sf-nav-link" href="#upload">Upload your bill</a>
+    </nav>
   </div>
+  <span class="sf-bar" id="bar" aria-hidden="true"></span>
+</header>
+<div id="intake">
+<main>
+  <!-- The scroll band. The copy is ordinary document flow; only the film's
+       playhead is driven by script, so the page reads with JS off. -->
+  <section class="sf-band" id="band">
+    <div class="sf-stage">
+      <img class="sf-plate" src="https://d2ol7oe51mr4n9.cloudfront.net/user_3F3ONjwr77mQGpK5oVuBXTCRowx/ea4056d5-5f1a-4765-be34-6533321c4ef4.png" alt="" aria-hidden="true">
+      <video id="film" muted playsinline preload="none" aria-hidden="true"
+             poster="https://d2ol7oe51mr4n9.cloudfront.net/user_3F3ONjwr77mQGpK5oVuBXTCRowx/ea4056d5-5f1a-4765-be34-6533321c4ef4.png"
+             data-desktop="https://d2ol7oe51mr4n9.cloudfront.net/user_3F3ONjwr77mQGpK5oVuBXTCRowx/ed9f71d9-86f1-40cd-9ce2-49012500f195.mp4"
+             data-mobile="https://d2ol7oe51mr4n9.cloudfront.net/user_3F3ONjwr77mQGpK5oVuBXTCRowx/e65c2aad-73e7-4b0f-a40c-7d7632c4d9c3.mp4"></video>
+      <div class="sf-chapter">
+        <div class="sf-shell">
+          <p class="sf-kicker">Free. No account.</p>
+          <h1 class="sf-h1">The bill you have been avoiding.</h1>
+          <p class="sf-sub">Photograph it. In about two minutes Sokra tells you what looks wrong on it, every way to bring it down, and the exact words to say.</p>
+          <p class="sf-types"><span>Medical</span><span>Collections</span><span>Credit card</span><span>Utilities</span></p>
+          <p class="sf-acts">
+            <a class="sf-seam" href="#upload">Upload your bill</a>
+            <a class="sf-readout" href="./sample.html">See a finished plan<b></b></a>
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
 
-  <div id="analyzing" class="hidden" role="status" aria-live="polite">
+
+  <section class="sf-sec" id="upload">
+    <div class="wrap" style="padding-bottom:0">
+      <div class="sf-upload-lead">
+        <h2 class="sf-h2">Start with the bill in front of you.</h2>
+        <p>A photograph is enough. Nothing is sent to your biller.</p>
+      </div>
+      <div class="card">
+        <div class="drop" id="drop">
+          <input type="file" id="files" accept="image/*,.heic,.heif,application/pdf" multiple>
+          <div class="big">Tap to photograph or upload</div>
+          <div class="small">Photo or PDF &middot; up to 6 pages</div>
+          <div class="thumbs" id="thumbs"></div>
+        </div>
+        <div class="err" id="err" role="alert"></div>
+
+        <div id="ctx" class="ctx-open">
+          <div class="ctx-head">
+            <span class="ctx-title">A few quick questions</span>
+            <span class="ctx-why">They decide if you qualify for help</span>
+          </div>
+          <div class="grid">
+            <div><label for="income">Household income before tax, per year</label><input type="text" id="income" inputmode="numeric" placeholder="36,000" aria-describedby="income_help"><span class="ctx-why" id="income_help">Yearly, not monthly. A rough number is fine.</span></div>
+            <div><label for="household">People in household</label><input type="number" id="household" min="1" max="12" placeholder="2"></div>
+          </div>
+          <div style="margin-top:12px"><label for="goal">What matters most to you here?</label>
+            <select id="goal">
+              <option value="gone">I just want the balance gone</option>
+              <option value="credit">Protecting my credit, I'm applying for a loan or mortgage</option>
+              <option value="cant_pay">I can't cover rent, food or medicine right now</option>
+              <option value="sued">I'm being sued, garnished, or threatened with it</option>
+            </select>
+            <span class="ctx-why">This changes the advice. Paying a bill off can lower the balance and still hurt your credit.</span>
+          </div>
+          <label class="check" style="margin-top:14px"><input type="checkbox" id="consent_store"> <span>Keep a copy of my bill so I can come back to it. Leave this off and your photo is deleted after it's read, and your plan still works.</span></label>
+          <details class="ctx more">
+            <summary>More details (optional)</summary>
+            <div class="grid">
+              <div><label for="state">State</label><input type="text" id="state" maxlength="2" placeholder="FL" style="text-transform:uppercase"></div>
+              <div><label for="insured">Do you have health insurance?</label><select id="insured"><option value="">Not sure / not relevant</option><option value="yes">Yes</option><option value="no">No</option></select></div>
+            </div>
+            <div style="margin-top:12px"><label for="notes">Anything else</label><textarea id="notes" placeholder="e.g. This was an ER visit. A collector already wrote to me. I lost my job in June."></textarea></div>
+            <div style="margin-top:12px" id="email_row" hidden><label for="email">Email, so we can send your plan and check in once in two weeks</label><input type="email" id="email" placeholder="you@example.com"></div>
+          </details>
+        </div>
+
+        <button class="btn" id="go" disabled>Analyze my bill, free</button>
+        <p class="fine">Takes one to two minutes. It reads every line and checks the law that applies. Nothing is sent to your biller. <a href="./privacy.html">Privacy</a></p>
+        <div class="install" id="install"><b>Keep Sokra on your phone.</b> <a href="#" id="install_btn">Add to home screen</a></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sf-settled">
+    <div class="sf-settled-bg" aria-hidden="true">
+      <picture>
+        <source media="(max-width: 860px)" srcset="https://d2ol7oe51mr4n9.cloudfront.net/user_3F3ONjwr77mQGpK5oVuBXTCRowx/ee4795a1-7de7-414d-888c-d248baf363b7.png">
+        <img src="https://d2ol7oe51mr4n9.cloudfront.net/user_3F3ONjwr77mQGpK5oVuBXTCRowx/4a065166-a8b9-41b5-89ec-7971171ebc82.png" alt="">
+      </picture>
+    </div>
+    <div class="sf-settled-copy">
+      <article class="sf-chap sf-shell">
+        <div>
+          <h2 class="sf-h2">Sokra reads every line.</h2>
+          <p>It checks the arithmetic, the dates, the quantities and the rules that apply to your kind of bill. Charges that appear twice. Fees added after the day they were due. A window that has not actually closed.</p>
+        </div>
+      </article>
+      <article class="sf-chap sf-shell">
+        <div>
+          <h2 class="sf-h2">Then it gives you the words.</h2>
+          <p>Not a summary of your situation. A script you can read down the phone tomorrow morning, with the paragraph numbers that back it up.</p>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <section class="sf-sec" id="what-it-does">
+    <div class="sf-shell">
+      <p class="sf-eyebrow">What it does with the page you send</p>
+      <h2 class="sf-h2">Six passes over one bill, in <em>this order</em>.</h2>
+      <div class="sf-steps">
+        <div class="sf-step"><img src="https://d2ol7oe51mr4n9.cloudfront.net/user_3F3ONjwr77mQGpK5oVuBXTCRowx/a56e316d-0272-4cf6-b541-a30eed09817b.png" alt="" width="38" height="38"><h3>Reads the statement</h3><p>Every line, every code, every fee, including the ones printed small.</p></div>
+        <div class="sf-step"><img src="https://d2ol7oe51mr4n9.cloudfront.net/user_3F3ONjwr77mQGpK5oVuBXTCRowx/547388a0-7551-4e2b-95ee-a156fbeb373f.png" alt="" width="38" height="38"><h3>Finds what is wrong</h3><p>Duplicates, arithmetic that does not add up, quantities that do not match the visit, charges added late.</p></div>
+        <div class="sf-step"><img src="https://d2ol7oe51mr4n9.cloudfront.net/user_3F3ONjwr77mQGpK5oVuBXTCRowx/cff6aa5a-bceb-4fdd-8e7c-bad4354b3437.png" alt="" width="38" height="38"><h3>Checks what the law allows</h3><p>The rules for your kind of bill, in your state, and which of them your biller has to follow.</p></div>
+        <div class="sf-step"><img src="https://d2ol7oe51mr4n9.cloudfront.net/user_3F3ONjwr77mQGpK5oVuBXTCRowx/41ce202f-7a83-434c-82eb-029451050d58.png" alt="" width="38" height="38"><h3>Flags the deadlines</h3><p>Which windows are still open and until exactly when, including the ones nobody quotes you.</p></div>
+        <div class="sf-step"><img src="https://d2ol7oe51mr4n9.cloudfront.net/user_3F3ONjwr77mQGpK5oVuBXTCRowx/39e18ad1-e32e-4b6d-9c8e-c8f31778533c.png" alt="" width="38" height="38"><h3>Finds the help you qualify for</h3><p>Assistance and hardship programs you may already qualify for, with the income cutoffs written out.</p></div>
+        <div class="sf-step"><img src="https://d2ol7oe51mr4n9.cloudfront.net/user_3F3ONjwr77mQGpK5oVuBXTCRowx/2de57e2b-ee82-4527-bce7-f7a9c3cb3eb4.png" alt="" width="38" height="38"><h3>Writes what to say</h3><p>A script for the call, in order, with the citations sitting behind each line.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sf-sec">
+    <div class="sf-shell sf-order">
+      <div>
+        <h2 class="sf-h2">Paying the wrong thing first can cost you the write off.</h2>
+        <p class="sf-lede">A hospital can forgive a balance you have not paid yet. Pay it down to be responsible and the assistance you already qualified for may no longer apply to it. Settling a collections account can drop your score in the month you were about to apply for a mortgage.</p>
+        <p class="sf-lede">That is what Sokra is built around. It tells you what to do second, not just what to do first.</p>
+      </div>
+      <figure><img src="https://d2ol7oe51mr4n9.cloudfront.net/user_3F3ONjwr77mQGpK5oVuBXTCRowx/0028b2db-3c3c-4e4d-a09b-7e9404dcb780.jpg" alt="" loading="lazy"></figure>
+    </div>
+  </section>
+
+  <section class="sf-facts sf-sec">
+    <div class="sf-facts-bg" aria-hidden="true"><img src="https://d2ol7oe51mr4n9.cloudfront.net/user_3F3ONjwr77mQGpK5oVuBXTCRowx/f3a44690-3108-4c8c-9290-414723a79b8b.jpg" alt="" loading="lazy"></div>
+    <div class="sf-shell sf-facts-grid">
+      <div class="sf-fact">
+        <span class="sf-fig">$0</span>
+        <p>Sokra never takes a cut of what comes off your bill. Negotiators take 18 to 25 percent of it.</p>
+      </div>
+      <div class="sf-fact">
+        <span class="sf-fig">240 days</span>
+        <p>The shortest window a nonprofit hospital has to keep accepting your financial assistance application, counted from your first statement. Most people are told far less.</p>
+        <span class="sf-src">IRS 501(r)</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="sf-sec" id="compare">
+    <div class="sf-shell">
+      <h2 class="sf-h2">The other way to do this costs a <em>quarter of it</em>.</h2>
+      <table class="sf-table">
+        <thead><tr><th scope="col"><span class="sf-sr">Measure</span></th><th scope="col">Bill negotiators</th><th scope="col">Sokra</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">What it costs</th><td data-side="Negotiators">18 to 25 percent of whatever they save you</td><td data-side="Sokra">Free. Documents are $29 flat, only if you want them.</td></tr>
+          <tr><th scope="row">Who makes the call</th><td data-side="Negotiators">They do, on your behalf</td><td data-side="Sokra">You do, with the words already in hand</td></tr>
+          <tr><th scope="row">What you keep afterwards</th><td data-side="Negotiators">A contract, minus their share</td><td data-side="Sokra">The script, the citations and the order to use them in</td></tr>
+          <tr><th scope="row">The next bill</th><td data-side="Negotiators">You hire them again</td><td data-side="Sokra">You already know how</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="sf-sec">
+    <div class="sf-shell">
+      <h2 class="sf-h2">What Sokra will not do with it.</h2>
+      <div class="sf-trust">
+        <div class="sf-trow"><h3>Your bill is not kept</h3><p>By default the photograph is deleted the moment it has been read. Ask us to keep a copy and you can delete it, and everything else, from your own plan page.</p></div>
+        <div class="sf-trow"><h3>Nobody is contacted for you</h3><p>Sokra never calls your hospital, your bank or a collector. It hands you the words and you decide whether to use them.</p></div>
+        <div class="sf-trow"><h3>Nothing is sold</h3><p>No data sold or shared, no advertising trackers, and no percentage of what you save.</p></div>
+        <div class="sf-trow"><h3>The reasoning is public</h3><p>Every rule Sokra applies is in a file you can read, and so is the rest of it. <a href="https://github.com/WealthRxAi/sokra" rel="noopener">Read the source</a></p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sf-close">
+    <div class="sf-shell">
+      <h2>You do not have to pay it as billed.</h2>
+      <p class="sf-close-act"><a class="sf-view" href="#upload"><i></i><i></i><i></i><i></i>Upload your bill</a></p>
+      <p class="sf-fine">Free · no account · about two minutes</p>
+    </div>
+  </section>
+</main>
+</div>
+
+<div id="analyzing" class="hidden sf-pad" role="status" aria-live="polite">
+  <div class="wrap">
     <div class="analyzing"><div class="ring"></div>
       <div style="font-family:var(--serif);font-size:22px;margin-bottom:10px">Reading your bill</div>
-      <div class="steps" id="steps">Reading every line…</div><p class="hint" style="margin-top:10px">This takes one to two minutes. Please keep this page open — closing or reloading it will lose the analysis.</p>
+      <div class="steps" id="steps">Reading every line&hellip;</div><p class="hint" style="margin-top:10px">This takes one to two minutes. Please keep this page open, because closing or reloading it will lose the analysis.</p>
       <div class="bar"><div class="bar-fill" id="barfill"></div></div></div>
   </div>
-
-  <div id="results" class="hidden" tabindex="-1" aria-label="Your plan"></div>
-
-  <footer><span>Sokra is made by <b>LLCreativity LLC</b>, Odessa, Florida · <a href="mailto:sokra@llcreativityllc.com">sokra@llcreativityllc.com</a> · <a href="https://github.com/WealthRxAi/sokra" rel="noopener">read the source</a></span><span><a href="./story.html">How it works</a> · <a href="./pricing.html">Pricing</a> · <a href="./privacy.html">Privacy</a> · <a href="./terms.html">Terms</a></span></footer>
 </div>
+
+<div id="results" class="hidden sf-pad wrap" tabindex="-1" aria-label="Your plan"></div>
+
+<footer class="sf-shell sf-foot">
+  <span>Sokra is made by <b>LLCreativity LLC</b>, Odessa, Florida &middot; <a href="mailto:sokra@llcreativityllc.com">sokra@llcreativityllc.com</a> &middot; <a href="https://github.com/WealthRxAi/sokra" rel="noopener">read the source</a></span>
+  <span><a href="./sample.html">Sample plan</a> &middot; <a href="./pricing.html">Pricing</a> &middot; <a href="./privacy.html">Privacy</a> &middot; <a href="./terms.html">Terms</a></span>
+</footer>
 <div class="toast" id="toast"></div>
 
-<script src="./sokra.js?v=11"></script>
+<script src="./sokra.js?v=12"></script>
+<script src="./story.js?v=3"></script>
 <script>
 const { API, $, prepare, renderPlan, toast, install, hit } = SOKRA;
 hit("landing");
@@ -153,7 +269,7 @@ function render(){
     else { const d = document.createElement("div"); d.className = "thumb"; d.textContent = "PDF"; thumbs.appendChild(d); }
   });
   go.disabled = picked.length === 0;
-  go.textContent = picked.length ? `Analyze ${picked.length > 1 ? picked.length + " pages" : "my bill"} — free` : "Analyze my bill — free";
+  go.textContent = picked.length ? `Analyze ${picked.length > 1 ? picked.length + " pages" : "my bill"}, free` : "Analyze my bill, free";
 }
 
 // Real analyses run 60–100s. Step and bar pacing below is tuned to that, not to a
