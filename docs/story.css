@@ -178,7 +178,7 @@ section.sf-sec, section.sf-settled, section.sf-facts, section.sf-close, section.
 
 /* the upload section: the app's own card, dropped into the journey */
 #upload { scroll-margin-top: 78px }
-.sf-upload-lead { max-width: 30ch; margin: 0 auto 26px; text-align: center }
+.sf-upload-lead { max-width: 38ch; margin: 0 auto 26px; text-align: center }
 .sf-upload-lead .sf-h2 { max-width: none }
 .sf-upload-lead p { color: var(--ink2); font-size: 16px; margin-top: 12px }
 
