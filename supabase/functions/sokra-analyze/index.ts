@@ -17,11 +17,12 @@
 //
 // Env (Supabase secrets): ANTHROPIC_API_KEY (required), RESEND_API_KEY (optional),
 //   STRIPE_SECRET_KEY + STRIPE_WEBHOOK_SECRET (optional — Pro tier off without them),
-//   SOKRA_MODEL (optional), SOKRA_FROM (optional email From)
+//   SOKRA_MODEL (optional), SOKRA_FROM (optional email From),
+//   SOKRA_REPLY_TO (optional — omitted entirely when unset)
 // Config (sokra.config): playbook, admin_token_sha256, cron_token_sha256, app_url
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { createClient } from "jsr:@supabase/supabase-js@2";
+import { createClient } from "npm:@supabase/supabase-js@2";
 import postgres from "npm:postgres@3.4.5";
 
 // Direct Postgres (the `sokra` schema is not exposed to PostgREST; this avoids that dependency entirely)
@@ -36,7 +37,11 @@ const anthropicHeaders = () => ({
   ...(ANTHROPIC_WS ? { "anthropic-workspace-id": ANTHROPIC_WS } : {}),
 });
 const RESEND_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
-const FROM = Deno.env.get("SOKRA_FROM") ?? "Sokra <sokra@llcreativityllc.com>";
+const FROM = Deno.env.get("SOKRA_FROM") ?? "Sokra <plans@getsokra.com>";
+// getsokra.com sends but does not receive — there is no MX on it. Without a Reply-To,
+// anyone who hits reply is talking to nobody. Set SOKRA_REPLY_TO to a mailbox that
+// actually exists; left unset, no header is sent rather than a broken one.
+const REPLY_TO = Deno.env.get("SOKRA_REPLY_TO") ?? "";
 const STRIPE_KEY = Deno.env.get("STRIPE_SECRET_KEY") ?? "";
 const STRIPE_WH = Deno.env.get("STRIPE_WEBHOOK_SECRET") ?? "";
 // An unsalted hash of an IPv4 address is reversible by brute force in minutes, so
@@ -330,7 +335,7 @@ async function sendEmail(to: string, subject: string, html: string): Promise<boo
     const r = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: { Authorization: `Bearer ${RESEND_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ from: FROM, to, subject, html }),
+      body: JSON.stringify({ from: FROM, to, subject, html, ...(REPLY_TO ? { reply_to: REPLY_TO } : {}) }),
     });
     return r.ok;
   } catch { return false; }
