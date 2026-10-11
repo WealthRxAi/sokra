@@ -128,6 +128,11 @@ window.SOKRA = (() => {
         ${(a.errors_found || []).length ? `<span class="pill warn">${a.errors_found.length} error${a.errors_found.length === 1 ? "" : "s"} found</span>` : ""}
       </div></div>`);
 
+    if (!noBill && id && opts.hasEmail !== true) h.push(`<div class="keep" id="keep">
+      <b>Keep this plan.</b> There is no account, so this page lives on this device only. Close the tab on your phone and you cannot open it on your laptop.
+      <div class="f"><input type="email" id="keep_email" placeholder="you@example.com" autocomplete="email"><button id="keep_btn">Email me this plan</button></div>
+      <span class="ctx-why" id="keep_msg">We send the plan, then one message in two weeks asking whether anything came off. Nothing else.</span></div>`);
+
     if (a.escalate) h.push(`<div class="esc"><b>Get a human on this.</b> ${esc(a.escalate)}</div>`);
     if (opts.returning && id && opts.outcomeDone == null && !noBill) h.push(`<div class="outcome-top"><b>Welcome back.</b> Made the call yet? When something comes off, <a href="#outcome" style="color:var(--teal)">tell us the number</a> — it's how we know this works.</div>`);
 
@@ -222,6 +227,18 @@ window.SOKRA = (() => {
     });
     if (a.bill_type === "medical" && !a.facility_policy) pollPolicy(id, root);
     $("#share_btn", root)?.addEventListener("click", () => copyText(opts.planUrl, "Link copied"));
+    $("#keep_btn", root)?.addEventListener("click", async () => {
+      const input = $("#keep_email", root), msg = $("#keep_msg", root), btn = $("#keep_btn", root);
+      const addr = (input.value || "").trim();
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(addr)) { msg.textContent = "That doesn't look like an email address."; input.focus(); return; }
+      btn.disabled = true; btn.textContent = "Sending\u2026";
+      try {
+        const r = await fetch(API + "/email-plan", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ id, email: addr }) });
+        const j = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(j.error || "Couldn't send it just now.");
+        $("#keep", root).innerHTML = `<b>Sent.</b> Your plan is on its way to ${esc(addr)}. If it is not there in a minute, check spam and mark it not spam so the follow-up reaches you.`;
+      } catch (e) { msg.textContent = e.message; btn.disabled = false; btn.textContent = "Email me this plan"; }
+    });
     if ($("#pro_btn", root)) hit("pro_shown");
     $("#pro_btn", root)?.addEventListener("click", async () => {
       hit("pro_clicked");

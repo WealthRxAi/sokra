@@ -96,6 +96,8 @@ function parseLooseJson(raw: string): Record<string, unknown> {
 
 const money = (c: number | null | undefined) => c == null ? "—" : "$" + Math.round(c / 100).toLocaleString("en-US");
 const isUuid = (s: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s);
+const toCents = (n: unknown) => (typeof n === "number" && isFinite(n) ? Math.round(n * 100) : null);
+const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
 function storage() {
   return createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!).storage.from("sokra-bills");
@@ -408,7 +410,7 @@ Deno.serve(async (req) => {
   if (req.method === "GET" && path.startsWith("/case/")) {
     const id = path.slice(6);
     if (!isUuid(id)) return json({ error: "bad id" }, 400);
-    const r = await sql`select id, created_at, provider, bill_type, analysis, outcome_reported_cents, deleted_at, tier, paid_at from sokra.cases where id = ${id}`;
+    const r = await sql`select id, created_at, provider, bill_type, analysis, outcome_reported_cents, deleted_at, tier, paid_at, (email is not null) as has_email from sokra.cases where id = ${id}`;
     const data = r[0];
     if (!data || data.deleted_at) return json({ error: "Plan not found or deleted" }, 404);
     return json({ ok: true, ...data });
@@ -443,11 +445,13 @@ Deno.serve(async (req) => {
     const pol = await sql`select meta->>'found' as found, count(*)::int as n from sokra.events where kind = 'policy_found' group by 1` as unknown as Array<{ found: string; n: number }>;
     const policy: Record<string, number> = {};
     for (const x of pol) policy[x.found === "true" ? "found" : "not_found"] = x.n;
+    const kept = await sql`select count(*)::int as n from sokra.events where kind = 'email_plan'`;
     const cost = live.reduce((a, x) => a + ((Number(x.tokens_in) || 0) * 3 + (Number(x.tokens_out) || 0) * 15) / 1e6, 0);
     return json({
       ok: true,
       cases: live.length, deleted: r.length - live.length,
       with_email: live.filter((x) => !!x.email).length,
+      emailed_from_plan: kept[0]?.n ?? 0,
       total_billed_cents: sum("total_cents"),
       est_low_cents: sum("est_reduction_low_cents"), est_high_cents: sum("est_reduction_high_cents"),
       outcomes_reported: outcomes.length,
@@ -545,6 +549,38 @@ Deno.serve(async (req) => {
   }
 
   // outcome
+  // The ask that converts is the one that comes after the value, not before it. This
+  // also arms the 14-day follow-up, which is the only signal telling us whether any
+  // of this actually saved anyone money.
+  if (path === "/email-plan") {
+    let b: { id?: string; email?: string } = {};
+    try { b = await req.json(); } catch { return json({ error: "bad json" }, 400); }
+    const addr = (b.email ?? "").toString().trim().toLowerCase().slice(0, 200);
+    if (!b.id || !isUuid(b.id) || !EMAIL_RE.test(addr)) return json({ error: "That doesn't look like an email address." }, 400);
+    if (!RESEND_KEY) return json({ error: "Email isn't switched on yet." }, 503);
+    const r = await sql`select id, analysis, email, deleted_at from sokra.cases where id = ${b.id}`;
+    const c = r[0];
+    if (!c || c.deleted_at || !c.analysis) return json({ error: "Plan not found or deleted" }, 404);
+    // The plan URL is the only secret guarding this, so cap how often one plan can be
+    // posted to an address and how fast one connection can do it. Otherwise it is a
+    // small open relay that sends real-looking mail.
+    const ip = req.headers.get("x-forwarded-for")?.split(",")[0].trim() ?? "";
+    const ipHash = ip ? (await sha(IP_SALT + "|" + ip)).slice(0, 32) : null;
+    const used = await sql`select count(*)::int as n from sokra.events where kind = 'email_plan' and case_id = ${b.id}`;
+    if ((used[0]?.n ?? 0) >= 3) return json({ error: "This plan has already been emailed a few times." }, 429);
+    if (ipHash) {
+      const burst = await sql`select count(*)::int as n from sokra.events where kind = 'email_plan' and meta->>'ip' = ${ipHash} and at >= now() - interval '1 hour'`;
+      if ((burst[0]?.n ?? 0) >= 10) return json({ error: "Too many sends from here. Try again in an hour." }, 429);
+    }
+    const appUrl = (await cfg("app_url")) ?? "";
+    const a = c.analysis as Record<string, unknown>;
+    const ok = await sendEmail(addr, `Your Sokra plan: ${money(toCents(a.estimated_reduction_low))}\u2013${money(toCents(a.estimated_reduction_high))} could come off`, planEmail(appUrl, b.id, a));
+    if (!ok) { await log("email_plan_failed", b.id, { ip: ipHash }); return json({ error: "Couldn't send it just now. Try again in a minute." }, 502); }
+    await sql`update sokra.cases set email = coalesce(email, ${addr}), plan_emailed_at = now() where id = ${b.id}`;
+    await log("email_plan", b.id, { ip: ipHash });
+    return json({ ok: true });
+  }
+
   if (path === "/outcome") {
     let b: { id?: string; amount?: number; note?: string } = {};
     try { b = await req.json(); } catch { return json({ error: "bad json" }, 400); }
@@ -626,7 +662,7 @@ Deno.serve(async (req) => {
     notes: g("notes", 1500) || null,
   };
   const emailRaw = g("email").toLowerCase();
-  const email = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(emailRaw) ? emailRaw : null;
+  const email = EMAIL_RE.test(emailRaw) ? emailRaw : null;
   const consentStore = g("consent_store", 5) === "1" || g("consent_store", 5) === "true";
   const source = g("source", 80) || null;
   const ua = (req.headers.get("user-agent") ?? "").slice(0, 200);
@@ -698,11 +734,10 @@ Deno.serve(async (req) => {
     await log("truncated", null, { chars: raw.length, levers: lv?.length });
   }
 
-  const cents = (n: unknown) => (typeof n === "number" && isFinite(n) ? Math.round(n * 100) : null);
   let id: string | undefined;
   try {
     const ins = await sql`insert into sokra.cases (email, bill_type, provider, total_cents, est_reduction_low_cents, est_reduction_high_cents, context, analysis, model, tokens_in, tokens_out, latency_ms, ip_hash, source, ua, consent_store, files)
-      values (${email}, ${(analysis.bill_type as string) ?? null}, ${(analysis.provider as string) ?? null}, ${cents(analysis.total_amount)}, ${cents(analysis.estimated_reduction_low)}, ${cents(analysis.estimated_reduction_high)},
+      values (${email}, ${(analysis.bill_type as string) ?? null}, ${(analysis.provider as string) ?? null}, ${toCents(analysis.total_amount)}, ${toCents(analysis.estimated_reduction_low)}, ${toCents(analysis.estimated_reduction_high)},
         ${sql.json(ctx as never)}, ${sql.json(analysis as never)}, ${MODEL}, ${usage.input_tokens ?? null}, ${usage.output_tokens ?? null}, ${latency}, ${ipHash}, ${source}, ${ua}, ${consentStore},
         ${sql.json(buffers.map(({ f }) => ({ name: f.name.slice(0, 120), type: f.type, size: f.size })) as never)})
       returning id`;
@@ -728,7 +763,7 @@ Deno.serve(async (req) => {
   let emailed = false;
   if (id && email) {
     const appUrl = (await cfg("app_url")) ?? "";
-    emailed = await sendEmail(email, `Your Sokra plan: ${money(cents(analysis.estimated_reduction_low))}–${money(cents(analysis.estimated_reduction_high))} could come off`, planEmail(appUrl, id, analysis));
+    emailed = await sendEmail(email, `Your Sokra plan: ${money(toCents(analysis.estimated_reduction_low))}–${money(toCents(analysis.estimated_reduction_high))} could come off`, planEmail(appUrl, id, analysis));
     if (emailed) await sql`update sokra.cases set plan_emailed_at = now() where id = ${id}`;
   }
 

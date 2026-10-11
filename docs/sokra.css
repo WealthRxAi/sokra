@@ -97,6 +97,13 @@ td.r,th.r{text-align:right;font-family:var(--mono);font-size:13px;white-space:no
 .q[open] .qq::after{content:"–"}
 .q p{color:var(--ink2);font-size:15px;margin-top:8px}
 .esc{background:rgba(142,130,214,.1);border:1px solid rgba(142,130,214,.4);border-radius:12px;padding:16px;margin-top:20px;font-size:15px}
+.keep{margin-top:22px;border:1px solid var(--gold);border-radius:14px;padding:16px 18px;background:linear-gradient(180deg,rgba(217,180,90,.07),transparent)}
+.keep b{font-family:var(--serif);font-weight:500;font-size:17px}
+.keep .f{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+.keep .f input{flex:1 1 200px}
+.keep .f button{background:var(--gold);color:#120F06;border:0;border-radius:10px;padding:0 18px;font:600 15px var(--sans);cursor:pointer;white-space:nowrap}
+.keep .f button[disabled]{opacity:.5;cursor:not-allowed}
+.keep .ctx-why{display:block;margin-top:10px}
 .outcome{margin-top:36px;border:1px solid var(--line);border-radius:14px;padding:18px;background:var(--bg2)}
 .outcome .t{font-family:var(--serif);font-size:19px;font-weight:500;margin-bottom:6px}
 .outcome .d{color:var(--ink3);font-size:14px;margin-bottom:12px}
