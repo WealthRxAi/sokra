@@ -97,6 +97,8 @@ td.r,th.r{text-align:right;font-family:var(--mono);font-size:13px;white-space:no
 .q[open] .qq::after{content:"–"}
 .q p{color:var(--ink2);font-size:15px;margin-top:8px}
 .esc{background:rgba(142,130,214,.1);border:1px solid rgba(142,130,214,.4);border-radius:12px;padding:16px;margin-top:20px;font-size:15px}
+.alt-path{margin-top:10px;font-size:14px;color:var(--ink3)}
+.alt-path a{color:var(--gold);text-decoration:underline;text-underline-offset:3px}
 .keep{margin-top:22px;border:1px solid var(--gold);border-radius:14px;padding:16px 18px;background:linear-gradient(180deg,rgba(217,180,90,.07),transparent)}
 .keep b{font-family:var(--serif);font-weight:500;font-size:17px}
 .keep .f{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}

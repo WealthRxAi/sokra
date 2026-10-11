@@ -23,7 +23,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://d2ol7oe51mr4n9.cloudfront.net" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;0,9..144,600;1,9..144,300&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="./sokra.css?v=14">
+<link rel="stylesheet" href="./sokra.css?v=15">
 <link rel="stylesheet" href="./story.css?v=3">
 </head>
 <body class="sf" id="top">
@@ -71,6 +71,7 @@
       <div class="sf-upload-lead">
         <h2 class="sf-h2">Start with the bill in front of you.</h2>
         <p>A photograph is enough. Nothing is sent to your biller.</p>
+        <p class="alt-path">Not holding it right now? <a href="./sample.html">Read a real plan first</a>, then come back when you have the bill.</p>
       </div>
       <div class="card">
         <div class="drop" id="drop">
@@ -113,6 +114,7 @@
         <div style="margin-top:14px" id="email_row" hidden><label for="email">Email your plan to you (optional)</label><input type="email" id="email" placeholder="you@example.com" aria-describedby="email_help"><span class="ctx-why" id="email_help">So you can open it later, or on a different device. We send the plan, then one message in two weeks asking whether anything came off. Nothing else, and still no account.</span></div>
 
         <button class="btn" id="go" disabled>Analyze my bill, free</button>
+        <a class="btn ghost" href="./sample.html" id="sample_btn" style="margin-top:10px">See a real plan first</a>
         <p class="fine">Takes one to two minutes. It reads every line and checks the law that applies. Nothing is sent to your biller. <a href="./privacy.html">Privacy</a></p>
         <div class="install" id="install"><b>Keep Sokra on your phone.</b> <a href="#" id="install_btn">Add to home screen</a></div>
       </div>
