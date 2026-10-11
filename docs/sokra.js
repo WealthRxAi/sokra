@@ -106,9 +106,18 @@ window.SOKRA = (() => {
     const levers = (a.levers || []).slice().sort((x, y) => (y.reduction_high || 0) - (x.reduction_high || 0));
     const h = [];
 
-    if (a.image_quality === "poor") h.push(`<div class="err" style="display:block;margin-top:24px">The photo was hard to read, so parts of this plan may be incomplete. ${esc(a.summary || "")}</div>`);
+    const noBill = !levers.length && !(tot > 0) && !(hi > 0);
 
-    h.push(`<div class="hero">
+    if (a.image_quality === "poor" && !noBill) h.push(`<div class="err" style="display:block;margin-top:24px">The photo was hard to read, so parts of this plan may be incomplete. ${esc(a.summary || "")}</div>`);
+
+    if (noBill) {
+      h.push(`<div class="hero">
+      <div class="k">Nothing to reduce here</div>
+      <div class="n" style="font-size:clamp(30px,6vw,42px);line-height:1.15">That doesn't look like a bill.</div>
+      <div class="sub">${esc(a.summary || "Upload a photo or PDF of the bill itself and Sokra will read it.")}</div>
+      <a class="btn" href="./#upload" style="width:auto;padding:14px 22px">Upload a bill</a>
+      </div>`);
+    } else h.push(`<div class="hero">
       <div class="k">${esc(a.provider || "Your bill")} · ${esc((a.bill_type || "").replace(/_/g, " "))}</div>
       <div class="n">${money(lo)}–${money(hi)} <small>could come off</small></div>
       <div class="sub">of ${money(tot)} total${pct && pct <= 80 ? ` — up to ${pct}%` : ""}. ${a.image_quality === "poor" ? "" : esc(a.summary || "")}</div>
@@ -120,7 +129,7 @@ window.SOKRA = (() => {
       </div></div>`);
 
     if (a.escalate) h.push(`<div class="esc"><b>Get a human on this.</b> ${esc(a.escalate)}</div>`);
-    if (opts.returning && id && opts.outcomeDone == null) h.push(`<div class="outcome-top"><b>Welcome back.</b> Made the call yet? When something comes off, <a href="#outcome" style="color:var(--teal)">tell us the number</a> — it's how we know this works.</div>`);
+    if (opts.returning && id && opts.outcomeDone == null && !noBill) h.push(`<div class="outcome-top"><b>Welcome back.</b> Made the call yet? When something comes off, <a href="#outcome" style="color:var(--teal)">tell us the number</a> — it's how we know this works.</div>`);
 
     if (a.do_first) h.push(`<section><h2 class="sec">Do this first</h2>
       <div class="first"><div class="a">${esc(a.do_first.action)}</div><div class="w">${esc(a.do_first.why)}</div><span class="when">${esc(a.do_first.when || "today")}</span></div></section>`);
