@@ -193,7 +193,7 @@ async function claudeText(system: string, user: string, maxTokens = 12000): Prom
   return (b.content ?? []).filter((c: { type: string }) => c.type === "text").map((c: { text: string }) => c.text).join("");
 }
 
-const DOCS_SYSTEM = `You write ready-to-send documents for a person disputing or reducing a bill, based on an analysis JSON of that bill. Plain, firm, polite English. First person. No legal threats, no claims you can't support from the analysis. Where a fact is unknown use [BRACKETS] for the person to fill in (e.g. [Your full name], [Account number]). Cite the specific law or program the analysis named (IRS 501(r), FDCPA §809, No Surprises Act, FCBA, etc.) in one plain sentence where relevant. Keep each document under 450 words.
+const DOCS_SYSTEM = `You write ready-to-send documents for a person disputing or reducing a bill, based on an analysis JSON of that bill. Plain, firm, polite English. First person. No legal threats, no claims you can't support from the analysis. Fill in every fact the analysis already contains — provider name, account last 4, dates of service, amounts, the billing address if it appears on the bill. Use [BRACKETS] ONLY for things the analysis genuinely does not know, such as [Your full name]. A bracket where you had the data is a defect. If the analysis contains a facility_policy block, use ITS numbers and cite the policy; it is the hospital's own published document and outranks any general rule. Cite the specific law or program the analysis named (IRS 501(r), FDCPA §1692g, FCRA §611, No Surprises Act, FCBA 15 U.S.C. §1666) in one plain sentence where relevant. Keep each document under 450 words.
 
 Respond with ONLY a JSON object:
 {
@@ -214,14 +214,14 @@ Respond with ONLY a JSON object:
 }
 
 Which letters to produce depends on bill type:
-- medical: (1) financial assistance / charity care application cover letter, (2) itemized bill + error dispute letter, (3) if in_collections: debt validation letter
-- credit_card: (1) hardship program request, (2) fee/charge dispute if errors_found
-- collections: (1) debt validation letter (FDCPA), (2) settlement offer letter (only if the analysis suggests settlement)
+- medical: (1) financial assistance application cover letter, (2) itemized bill + error dispute letter, (3) if insured and the plan should have paid: a written coverage appeal, (4) if in_collections: debt validation letter
+- credit_card: (1) hardship program request, (2) a MAILED Fair Credit Billing Act billing-error dispute (15 U.S.C. §1666) to the issuer's billing-inquiries address if errors_found is non-empty — say plainly in the letter's 'how' that a mailed dispute obliges a written investigation and bars reporting the disputed amount as delinquent while open, which a phone call does not
+- collections: (1) debt validation letter (FDCPA §1692g) to the collector, (2) if the person's goal is their credit, a separate FCRA §611 dispute addressed to the three credit bureaus — these are different letters to different parties and both are needed, (3) settlement offer only if the analysis suggests settlement
 - utility: (1) payment arrangement + hardship program request, (2) dispute if errors_found
 - telecom: (1) retention / repricing request
 - tax: (1) first-time penalty abatement request
 - others: the one or two letters that match the top levers
-Always produce the call sheet, checklist and timeline.`;
+Always produce the call sheet, checklist and timeline. In the call sheet's if_they_say, include the pushback the person will actually hear, and for any medical payment-plan conversation include: they offer financing through an outside company → the person asks whether the plan is with the provider itself and declines a third-party lender.`;
 
 async function generateDocs(analysis: Record<string, unknown>, ctx: Record<string, unknown>) {
   const raw = await claudeText(DOCS_SYSTEM, `Analysis JSON:\n${JSON.stringify(analysis)}\n\nPerson's context: ${JSON.stringify(ctx ?? {})}\nToday: ${new Date().toISOString().slice(0, 10)}`);
@@ -324,9 +324,11 @@ LENGTH BUDGET — you have a hard output ceiling. Running long gets the plan tru
 - At most 6 teach Q&As, answers under 70 words. At most 8 plain_words entries, only terms you actually used.
 - line_items: if the bill has more than 20 lines, include the ones you flagged plus the largest few, and say so in summary.
 - summary is 2 sentences. Never repeat in a lever what you already said in summary or do_first.
-Completeness of the JSON matters more than completeness of the advice.`;
+Completeness of the JSON matters more than completeness of the advice.
 
-const FALLBACK_PLAYBOOK = `You are Sokra, a financial advocate. Read the uploaded bill, find errors, list every realistic way to reduce it with exact scripts, say what to do first, flag deadlines, and teach 3 short Q&As. Education, not legal advice. Respond with ONLY a JSON object with keys: bill_type, provider, total_amount, currency, due_date, in_collections, summary, estimated_reduction_low, estimated_reduction_high, do_first{action,why,when}, deadlines[], errors_found[], levers[{name,applies_because,reduction_low,reduction_high,confidence,effort,steps[],script,who_to_contact}], line_items[], teach[{q,a}], escalate, disclaimer, image_quality.`;
+FACILITY POLICY — for a medical bill from a named facility, a separate lookup runs after you and reads that hospital's OWN published assistance policy, which is shown to the person beside your plan. So: give the general pattern only as a general pattern, say plainly that their hospital's own policy is what governs, and never state a specific FPL threshold as if it were this hospital's rule.`;
+
+const FALLBACK_PLAYBOOK = `You are Sokra, a financial advocate. Read the uploaded bill, find errors, list every realistic way to reduce it with exact scripts, say what to do first, flag deadlines, and teach 3 short Q&As. Education, not legal advice. Respond with ONLY a JSON object with keys: bill_type, provider, total_amount, currency, due_date, in_collections, summary, estimated_reduction_low, estimated_reduction_high, do_first{action,why,when}, deadlines[], errors_found[], levers[{name,applies_because,reduction_low,reduction_high,confidence,effort,blocked_by,blocked_why,steps[],script,who_to_contact}], plain_words[{term,means}], line_items[], teach[{q,a}], escalate, disclaimer, image_quality.`;
 
 // ─── email ───────────────────────────────────────────────────────────────────
 async function sendEmail(to: string, subject: string, html: string): Promise<boolean> {
@@ -374,7 +376,7 @@ Deno.serve(async (req) => {
     // secret NAMES present (never values) — helps diagnose a mistyped key name
     const names = Object.keys(Deno.env.toObject()).filter((k) => /ANTHROPIC|STRIPE|RESEND|SOKRA/i.test(k)).sort();
     let lastErr: unknown = null;
-    try { const e = await sql`select meta, at from sokra.events where kind in ('api_error','api_unreachable','parse_error') order by at desc limit 1`; lastErr = e[0] ?? null; } catch { /* ignore */ }
+    try { const e = await sql`select kind, meta, at from sokra.events where kind in ('api_error','api_unreachable','parse_error','policy_api_error') order by at desc limit 1`; lastErr = e[0] ?? null; } catch { /* ignore */ }
     return json({ ok: true, db: dbOk, has_key: !!ANTHROPIC_KEY, has_workspace: !!ANTHROPIC_WS, has_email: !!RESEND_KEY, has_stripe: !!STRIPE_KEY, has_stripe_webhook: !!STRIPE_WH, has_playbook: pb, model: MODEL, secret_names: names, last_engine_error: lastErr });
   }
 
@@ -438,6 +440,9 @@ Deno.serve(async (req) => {
     const steps: Record<string, { hits: number; people: number }> = {};
     for (const f of funnel) steps[f.step] = { hits: f.hits, people: f.people };
     // rough cost: sonnet-class pricing ~$3/M in, $15/M out
+    const pol = await sql`select meta->>'found' as found, count(*)::int as n from sokra.events where kind = 'policy_found' group by 1` as unknown as Array<{ found: string; n: number }>;
+    const policy: Record<string, number> = {};
+    for (const x of pol) policy[x.found === "true" ? "found" : "not_found"] = x.n;
     const cost = live.reduce((a, x) => a + ((Number(x.tokens_in) || 0) * 3 + (Number(x.tokens_out) || 0) * 15) / 1e6, 0);
     return json({
       ok: true,
@@ -450,7 +455,7 @@ Deno.serve(async (req) => {
       revenue_cents: live.reduce((a, x) => a + (Number(x.amount_paid_cents) || 0), 0),
       reported_reduced_cents: outcomes.reduce((a, x) => a + (Number(x.outcome_reported_cents) || 0), 0),
       by_type: byType, per_day: perDay, avg_latency_ms: avgLatency, est_api_cost_usd: +cost.toFixed(2),
-      funnel: steps,
+      funnel: steps, policy_lookups: policy,
       has_key: !!ANTHROPIC_KEY, has_email: !!RESEND_KEY, has_stripe: !!STRIPE_KEY, has_stripe_webhook: !!STRIPE_WH, model: MODEL,
     });
   }
@@ -565,7 +570,7 @@ Deno.serve(async (req) => {
       provider = null, ua = null, ip_hash = null, total_cents = null,
       est_reduction_low_cents = null, est_reduction_high_cents = null, deleted_at = now() where id = ${b.id}`;
     await sql`delete from sokra.events where case_id = ${b.id}`;
-    await log("delete", b.id);
+    await log("delete", null);
     return json({ ok: true });
   }
 
@@ -574,7 +579,7 @@ Deno.serve(async (req) => {
     const tok = req.headers.get("x-cron-token") ?? "";
     const want = await cfg("cron_token_sha256");
     if (!tok || !want || (await sha(tok)) !== want) return json({ error: "unauthorized" }, 401);
-    if (!RESEND_KEY) { await log("followup_run", null, { sent: 0, note: "no RESEND_API_KEY" }); return json({ ok: true, sent: 0, note: "RESEND_API_KEY not set" }); }
+    if (!RESEND_KEY) { await log("followup_run", null, { sent: 0, note: "no RESEND_API_KEY" }); return json({ ok: true, sent: 0, note: "RESEND_API_KEY not set", purged: await purgeExpired() }); }
     const appUrl = (await cfg("app_url")) ?? "";
     const data = await sql`select id, email, provider from sokra.cases where followup_sent_at is null and outcome_reported_cents is null and deleted_at is null and email is not null and created_at <= now() - interval '14 days' and created_at >= now() - interval '21 days' limit 100`;
     let sent = 0;
@@ -660,7 +665,7 @@ Deno.serve(async (req) => {
   ].filter(Boolean);
   content.push({ type: "text", text:
     `Analyze this bill and produce the full reduction plan as JSON.\n` +
-    (ctxLines.length ? `Context:\n${ctxLines.join("\n")}\n` : `No extra context was provided — note in levers where income/household info would unlock more (e.g. charity care).\n`) +
+    (ctxLines.length ? `Context:\n${ctxLines.join("\n")}\n` : `No extra context was provided — note in levers where income/household info would unlock more (e.g. financial assistance).\n`) +
     `Today's date: ${new Date().toISOString().slice(0, 10)}.` });
 
   const t0 = Date.now();
@@ -730,11 +735,12 @@ Deno.serve(async (req) => {
   // Look up this facility's real posted policy in the background. The plan is already
   // on its way back, so this adds nothing to the wait, and if it fails the plan stands.
   const providerName = (analysis.provider as string) ?? "";
-  if (id && analysis.bill_type === "medical" && providerName) {
-    const task = enrichWithPolicy(id, providerName, ctx.state);
+  const wantPolicy = !!(id && analysis.bill_type === "medical" && providerName);
+  if (wantPolicy) {
+    const task = enrichWithPolicy(id!, providerName, ctx.state);
     try { (globalThis as { EdgeRuntime?: { waitUntil(p: Promise<unknown>): void } }).EdgeRuntime?.waitUntil(task); }
     catch { /* no waitUntil here — let it run unawaited */ }
   }
 
-  return json({ ok: true, id: id ?? null, analysis, emailed, policy_pending: !!(id && analysis.bill_type === "medical" && providerName) });
+  return json({ ok: true, id: id ?? null, analysis, emailed, policy_pending: wantPolicy });
 });
