@@ -41,7 +41,7 @@ const FROM = Deno.env.get("SOKRA_FROM") ?? "Sokra <plans@getsokra.com>";
 // getsokra.com sends but does not receive — there is no MX on it. Without a Reply-To,
 // anyone who hits reply is talking to nobody. Set SOKRA_REPLY_TO to a mailbox that
 // actually exists; left unset, no header is sent rather than a broken one.
-const REPLY_TO = Deno.env.get("SOKRA_REPLY_TO") ?? "";
+const REPLY_TO = Deno.env.get("SOKRA_REPLY_TO") ?? "salman@llcreativityllc.com";
 const STRIPE_KEY = Deno.env.get("STRIPE_SECRET_KEY") ?? "";
 const STRIPE_WH = Deno.env.get("STRIPE_WEBHOOK_SECRET") ?? "";
 // An unsalted hash of an IPv4 address is reversible by brute force in minutes, so
