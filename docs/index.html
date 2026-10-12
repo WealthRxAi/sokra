@@ -84,8 +84,8 @@
 
         <div id="ctx" class="ctx-open">
           <div class="ctx-head">
-            <span class="ctx-title">A few quick questions</span>
-            <span class="ctx-why">They decide if you qualify for help</span>
+            <span class="ctx-title">A few quick questions, all optional</span>
+            <span class="ctx-why">Skip them and your plan still works. They unlock assistance programs.</span>
           </div>
           <div class="grid">
             <div><label for="income">Household income before tax, per year</label><input type="text" id="income" inputmode="numeric" placeholder="36,000" aria-describedby="income_help"><span class="ctx-why" id="income_help">Yearly, not monthly. A rough number is fine.</span></div>
@@ -113,6 +113,7 @@
 
         <div style="margin-top:14px" id="email_row" hidden><label for="email">Email your plan to you (optional)</label><input type="email" id="email" placeholder="you@example.com" aria-describedby="email_help"><span class="ctx-why" id="email_help">So you can open it later, or on a different device. We send the plan, then one message in two weeks asking whether anything came off. Nothing else, and still no account.</span></div>
 
+        <p class="alt-path" id="ready_note" style="display:none;text-align:center">Your bill is attached. Nothing below is required &mdash; you can analyze it now.</p>
         <button class="btn" id="go" disabled>Analyze my bill, free</button>
         <a class="btn ghost" href="./sample.html" id="sample_btn" style="margin-top:10px">See a real plan first</a>
         <p class="fine">Takes one to two minutes. It reads every line and checks the law that applies. Nothing is sent to your biller. <a href="./privacy.html">Privacy</a></p>
@@ -273,6 +274,8 @@ function render(){
     else { const d = document.createElement("div"); d.className = "thumb"; d.textContent = "PDF"; thumbs.appendChild(d); }
   });
   go.disabled = picked.length === 0;
+  const rdy = document.getElementById("ready_note");
+  if (rdy) rdy.style.display = picked.length ? "block" : "none";
   go.textContent = picked.length ? `Analyze ${picked.length > 1 ? picked.length + " pages" : "my bill"}, free` : "Analyze my bill, free";
 }
 
