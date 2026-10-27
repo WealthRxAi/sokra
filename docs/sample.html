@@ -71,7 +71,37 @@
 <script src="./sokra.js?v=16"></script>
 <script>SOKRA.hit("sample");</script>
 <script>
-fetch("./sample-plan.json").then(r => r.json()).then(a => { SOKRA.renderPlan(document.getElementById("results"), a, null, { tier: "free", pricing: { enabled: false } }); });
+// The sample is a fixed document, so its dates would go stale and show an
+// expired deadline. Rebase the whole timeline by however many days have passed
+// since the plan was authored; every interval inside it stays exactly as written.
+function rebase(text, anchor) {
+  var MS = 86400000;
+  var shift = Math.floor((Date.now() - Date.parse(anchor + "T00:00:00Z")) / MS);
+  if (!isFinite(shift) || shift <= 0) return text;
+  var MONTHS = ["January","February","March","April","May","June","July",
+                "August","September","October","November","December"];
+  var moved = [];
+  text = text.replace(/\b(\d{2})\/(\d{2})\/(\d{4})\b/g, function (_, mm, dd, yyyy) {
+    var t = new Date(Date.UTC(+yyyy, +mm - 1, +dd) + shift * MS);
+    moved.push(t);
+    return String(t.getUTCMonth() + 1).padStart(2, "0") + "/" +
+           String(t.getUTCDate()).padStart(2, "0") + "/" + t.getUTCFullYear();
+  });
+  // Prose months derived from those dates ("mid-January 2027") must follow them.
+  if (moved.length) {
+    var horizon = new Date(Math.min.apply(null, moved.map(Number)) + 120 * MS);
+    text = text.replace(/\b(early|mid|late)-(January|February|March|April|May|June|July|August|September|October|November|December) \d{4}\b/g,
+      function (_, part) { return part + "-" + MONTHS[horizon.getUTCMonth()] + " " + horizon.getUTCFullYear(); });
+  }
+  return text;
+}
+fetch("./sample-plan.json")
+  .then(r => r.text())
+  .then(t => {
+    var probe = JSON.parse(t), anchor = (probe.analysis || probe)._anchor;
+    var a = anchor ? JSON.parse(rebase(t, anchor)) : probe;
+    SOKRA.renderPlan(document.getElementById("results"), a.analysis || a, null, { tier: "free", pricing: { enabled: false } });
+  });
 </script>
 </body>
 </html>
