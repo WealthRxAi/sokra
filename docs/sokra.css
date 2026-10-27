@@ -220,3 +220,21 @@ input[type=text],input[type=number],input[type=email],select,textarea{border-col
 .more-pol summary::-webkit-details-marker{display:none}
 .more-pol ul{margin:6px 0 0 18px;color:var(--ink2);font-size:14px;line-height:1.55}
 .more-pol li{margin-bottom:8px}
+
+/* Static (pre-rendered) plan markup. Visible to crawlers and to no-JS readers;
+   the client renderer replaces it with the interactive version on load. */
+.lever > h3{font-family:var(--serif);font-weight:500;font-size:19px;letter-spacing:-.01em;margin:0;padding:16px 18px 0}
+.lever-amt{font-family:var(--mono);font-size:14px;color:var(--gold);margin:6px 18px 0}
+.lever > p,.lever > ol,.lever > blockquote{margin-left:18px;margin-right:18px}
+.lever > p{color:var(--ink2);font-size:14px;margin-top:10px}
+.lever > ol{color:var(--ink2);font-size:14px;padding-left:20px}
+.lever > ol li{margin-bottom:6px}
+.lever > blockquote.script{margin-bottom:16px}
+.lever > blockquote.script p{margin:0;font-family:var(--mono);font-size:13px;line-height:1.6;color:var(--ink)}
+.faq-item{border-bottom:1px solid var(--line)}
+.faq-item > summary{cursor:pointer;list-style:none;padding:15px 34px 15px 0;position:relative;font-size:15px;color:var(--ink)}
+.faq-item > summary::-webkit-details-marker{display:none}
+.faq-item > summary::after{content:"+";position:absolute;right:6px;top:15px;font-family:var(--mono);color:var(--ink3)}
+.faq-item[open] > summary::after{content:"\2013"}
+.faq-a{padding:0 34px 18px 0}
+.faq-a p{margin:0;color:var(--ink2);font-size:14px;line-height:1.6}

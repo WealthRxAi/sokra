@@ -184,3 +184,26 @@ section.sf-sec, section.sf-settled, section.sf-facts, section.sf-close, section.
 
 /* the analysis and plan views sit under the fixed nav */
 .sf-pad { padding-top: 92px }
+
+/* FAQ accordion. Visible answers backing the FAQPage schema. */
+.sf-faq { max-width: 760px; margin: 0 auto }
+.faq-item { border-bottom: 1px solid var(--line); }
+.faq-item:first-of-type { border-top: 1px solid var(--line) }
+.faq-item > summary {
+  cursor: pointer; list-style: none; padding: 20px 44px 20px 0; position: relative;
+  font: 500 17px/1.4 var(--sans); color: var(--ink);
+}
+.faq-item > summary::-webkit-details-marker { display: none }
+.faq-item > summary::after {
+  content: ""; position: absolute; right: 8px; top: 50%; width: 11px; height: 11px;
+  margin-top: -6px; border-right: 1.5px solid var(--ink3); border-bottom: 1.5px solid var(--ink3);
+  transform: rotate(45deg); transition: transform .18s ease, border-color .18s ease;
+}
+.faq-item[open] > summary::after { transform: rotate(-135deg); border-color: var(--gold) }
+.faq-item > summary:hover { color: var(--gold) }
+.faq-a { padding: 0 44px 24px 0 }
+.faq-a p { color: var(--ink2); font-size: 16px; line-height: 1.65; margin: 0 }
+@media (max-width: 640px) {
+  .faq-item > summary { font-size: 16px; padding-right: 36px }
+  .faq-a { padding-right: 0 }
+}
